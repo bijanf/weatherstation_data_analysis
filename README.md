@@ -20,3 +20,5 @@ pip instal meteostat
 ## Authors
 
 * **Bijan Fallah** - *Initial work* - [bijanf](https://github.com/bijanf)
+<!-- Place this tag where you want the button to render. -->
+<a class="github-button" href="https://github.com/buttons" aria-label="Follow @buttons on GitHub">Follow @buttons</a>
