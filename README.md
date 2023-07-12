@@ -12,3 +12,8 @@ import matplotlib.pyplot as plt
 from meteostat import Stations, Daily, Hourly
 from datetime import datetime,date , timedelta
 ```
+### Installing
+For installing the meteostat library you could use the pip commdad: 
+```Bash
+pip instal meteostat
+```
