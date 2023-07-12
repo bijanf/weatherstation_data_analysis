@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from meteostat import Stations, Daily, Hourly
 from datetime import datetime,date , timedelta
 ```
+The list of the climate station could be found for Germany here : https://www.dwd.de/DE/leistungen/klimadatendeutschland/stationsuebersicht.html?nn=16102&lsbId=343278
 ### Installing
 For installing the meteostat library you could use the pip commdad: 
 ```Bash
