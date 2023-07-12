@@ -17,3 +17,6 @@ For installing the meteostat library you could use the pip commdad:
 ```Bash
 pip instal meteostat
 ```
+## Authors
+
+* **Bijan Fallah** - *Initial work* - [bijanf(https://github.com/bijanf)
