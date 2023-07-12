@@ -19,4 +19,4 @@ pip instal meteostat
 ```
 ## Authors
 
-* **Bijan Fallah** - *Initial work* - [bijanf(https://github.com/bijanf)
+* **Bijan Fallah** - *Initial work* - [bijanf](https://github.com/bijanf)
