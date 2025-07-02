@@ -94,14 +94,6 @@ The script generates `real_cumulative_precipitation_plot.png` featuring:
 - **Elevation**: 81m above sea level
 - **Period**: 1893-2025 (133 years)
 
-## 📱 Social Media Ready
-
-The project includes Instagram-optimized content:
-- **Kid-friendly explanation** suitable for science education
-- **Comprehensive hashtags** for climate and data science communities
-- **High-resolution output** (300 DPI) for professional sharing
-- **Clear messaging** about climate patterns and data integrity
-
 ## 🛠️ Technical Details
 
 ### Data Quality Control
