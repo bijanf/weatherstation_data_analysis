@@ -1,0 +1,22 @@
+# Weather Station Data Analysis - Requirements
+# Python dependencies for Potsdam precipitation analysis
+
+# Core data processing
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Plotting and visualization  
+matplotlib>=3.6.0
+
+# Weather data API
+meteostat>=1.6.0
+
+# Optional: Enhanced statistical plots
+seaborn>=0.11.0
+
+# Date/time handling (usually included with Python, but explicit for clarity)
+# datetime - built-in module
+
+# For potential future jupyter notebook usage
+# jupyter>=1.0.0  # Uncomment if using notebooks
+# ipykernel>=6.0.0  # Uncomment if using notebooks 
