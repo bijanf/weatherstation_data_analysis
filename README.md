@@ -1,3 +1,5 @@
+![Cumulative Precipitation Plot](real_cumulative_precipitation_plot.png)
+
 # Potsdam Precipitation Analysis: 133 Years of Climate Data
 
 A comprehensive analysis of precipitation patterns at Potsdam Säkularstation, Germany, using 133 years of real meteorological data (1893-2025). This project creates compelling visualizations showing historical drought patterns and current climate trends.
