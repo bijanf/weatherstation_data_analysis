@@ -121,7 +121,6 @@ weatherstation_data_analysis/
 ├── coldest_temperature_plot.png        # Minimum temperature plot
 ├── days_above_30C_plot.png            # Hot days analysis
 ├── days_below_0C_plot.png             # Cold days analysis
-├── Saekularstation_Potsdam_Telegraphenberg.ipynb  # Jupyter notebook
 ├── requirements.txt                     # Python dependencies
 ├── README.md                           # Project documentation
 └── potsdam_data/                       # Data directory
