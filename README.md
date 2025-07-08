@@ -4,6 +4,10 @@
 
 A comprehensive analysis of precipitation and temperature patterns at Potsdam Säkularstation, Germany, using 133 years of real meteorological data (1893-2025). This project creates compelling visualizations showing historical climate patterns and current trends.
 
+## TODO
+
+- [ ] Check ERA5 time-series along the stations
+
 ## 🌧️ Precipitation Analysis
 
 This project analyzes cumulative daily precipitation data from one of the world's oldest weather stations - the Potsdam Säkularstation Telegraphenberg. The analysis covers:
