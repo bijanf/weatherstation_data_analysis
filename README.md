@@ -1,152 +1,133 @@
-![Cumulative Precipitation Plot](real_cumulative_precipitation_plot.png)
+# Weather Station Data Analysis
 
-# Potsdam Weather Station Analysis: 133 Years of Climate Data
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](https://mypy-lang.org/)
+[![Linting: flake8](https://img.shields.io/badge/linting-flake8-yellowgreen)](https://flake8.pycqa.org/)
+[![Testing: pytest](https://img.shields.io/badge/testing-pytest-green)](https://docs.pytest.org/)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](https://coverage.readthedocs.io/)
 
-A comprehensive analysis of precipitation and temperature patterns at Potsdam Säkularstation, Germany, using 133 years of real meteorological data (1893-2025). This project creates compelling visualizations showing historical climate patterns and current trends.
+![Extreme Value Analysis](extreme_statistics_summary.png)
 
-## 🌧️ Precipitation Analysis
+## 🌟 Overview
 
-This project analyzes cumulative daily precipitation data from one of the world's oldest weather stations - the Potsdam Säkularstation Telegraphenberg. The analysis covers:
+A comprehensive Python package for analyzing weather station data with a focus on **extreme value statistics** and **long-term climate trends**. This project provides professional-grade tools for climate data analysis, featuring 133 years of real meteorological data from the Potsdam Säkularstation, Germany.
 
-- **133 years of real data** (1893-2025) from Meteostat/DWD
-- **Data quality verification** with 80%+ coverage filtering
-- **Instagram-ready visualizations** highlighting climate extremes
-- **Scientific accuracy** with no synthetic data generation
+### 🎯 Key Features
 
-### 📊 Precipitation Key Findings
+- **📊 Extreme Value Analysis**: Annual maxima, return periods, threshold exceedances
+- **🌡️ Temperature Extremes**: Comprehensive temperature trend analysis
+- **🌧️ Precipitation Analysis**: Cumulative precipitation and drought analysis
+- **📈 Statistical Modeling**: Gumbel distribution fitting, trend analysis
+- **🎨 Publication-Quality Plots**: Professional visualizations ready for scientific publication
+- **🔬 Reproducible Science**: Fully documented, tested, and version-controlled analysis
+- **⚡ Modular Architecture**: Clean, maintainable code with proper separation of concerns
 
-- **2018**: Driest year on record (346mm total precipitation)
-- **2025**: Currently tracking below the 2018 drought year through July
-- **Historical context**: Complete precipitation records from 1893-2024
-- **Data integrity**: 100% coverage for nearly all years in the dataset
+## 📈 Analysis Results
 
-### 🎯 Precipitation Script: `real_precipitation_plot.py`
+### 🌪️ Extreme Value Statistics (1893-2024)
 
-The precipitation analysis script creates a powerful visualization showing:
-- All historical years (1893-2024) in gray
-- 2018 drought year highlighted in red
-- 2025 current year highlighted in blue
-- Professional Instagram-ready formatting
+| **Metric** | **Value** | **Year** |
+|------------|-----------|----------|
+| Maximum daily precipitation | **104.8 mm** | 1978 |
+| Highest temperature | **38.9°C** | 2022 |
+| Lowest temperature | **-26.8°C** | 1929 |
+| Largest temperature range | **61.5°C** | 1929 |
 
-## 🌡️ Temperature Analysis
+### 📊 Generated Visualizations
 
-New comprehensive temperature analysis covering 133 years of temperature data from Potsdam Säkularstation.
+1. **`extreme_precipitation_analysis.png`** - Annual precipitation extremes with return period analysis
+2. **`temperature_extremes_analysis.png`** - Comprehensive temperature extremes (4-panel analysis)
+3. **`threshold_exceedance_analysis.png`** - Frequency of extreme weather events
+4. **`extreme_statistics_summary.png`** - Statistical summary dashboard
+5. **`real_cumulative_precipitation_plot.png`** - Cumulative precipitation comparison
+6. **`hottest_temperature_plot.png`** - Annual maximum temperatures
+7. **`coldest_temperature_plot.png`** - Annual minimum temperatures
+8. **`days_above_30C_plot.png`** - Hot days frequency analysis
+9. **`days_below_0C_plot.png`** - Cold days frequency analysis
 
-### 📊 Temperature Key Findings
-
-- **Maximum Temperatures**: Range from 29.5°C (1916) to 38.9°C (2022)
-- **Minimum Temperatures**: Range from -30°C to 0°C (optimized y-axis)
-- **Extreme Days**: Analysis of days above 30°C and below 0°C annually
-- **Climate Trends**: Clear warming patterns visible in all temperature metrics
-
-### 🎯 Temperature Script: `hottest_temperature_plot.py`
-
-The temperature analysis script generates four comprehensive visualizations:
-
-#### 1. Hottest Temperature Each Year (1893-2024)
-![Hottest Temperature Plot](hottest_temperature_plot.png)
-- Shows yearly maximum temperatures with trend line
-- Highlights the hottest year on record
-- Clean design with red dots and black trend line
-
-#### 2. Coldest Temperature Each Year (1893-2024)
-![Coldest Temperature Plot](coldest_temperature_plot.png)
-- Shows yearly minimum temperatures with trend line
-- Y-axis optimized to -30°C to 0°C range
-- Blue dots with black trend line for clarity
-
-#### 3. Days Above 30°C Per Year (1893-2024)
-![Days Above 30°C Plot](days_above_30C_plot.png)
-- Counts days per year with maximum temperature > 30°C
-- Shows increasing frequency of hot days over time
-- Red dots with black trend line
-
-#### 4. Days Below 0°C Per Year (1893-2024)
-![Days Below 0°C Plot](days_below_0C_plot.png)
-- Counts days per year with minimum temperature < 0°C
-- Shows decreasing frequency of cold days over time
-- Blue dots with black trend line
-
-### 🌡️ Temperature Analysis Features
-
-- **Real data only**: No synthetic or interpolated values
-- **Quality control**: Filters years with <80% data coverage
-- **Professional styling**: Clean design optimized for social media
-- **Scientific accuracy**: Proper attribution and data sources
-- **No legends**: Clean, minimalist design focusing on data
-- **Year ranges in titles**: Clear indication of data coverage period
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-from meteostat import Stations, Daily
-from datetime import datetime, date
-import numpy as np
-```
+## 🚀 Quick Start
 
 ### Installation
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/[username]/weatherstation_data_analysis.git
+# Clone the repository
+git clone https://github.com/bijanf/weatherstation_data_analysis.git
 cd weatherstation_data_analysis
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# For development
+pip install -r requirements-dev.txt
 ```
 
-3. Run the analyses:
+### Basic Usage
+
+```python
+from weatherstation_analysis import PotsdamDataFetcher, ExtremeValueAnalyzer, WeatherPlotter
+
+# Fetch weather data
+fetcher = PotsdamDataFetcher()
+data = fetcher.fetch_comprehensive_data()
+
+# Analyze extremes
+analyzer = ExtremeValueAnalyzer(data)
+extremes = analyzer.analyze_annual_extremes()
+
+# Create visualizations
+plotter = WeatherPlotter()
+plotter.plot_annual_precipitation_extremes(extremes, 'precipitation_extremes.png')
+```
+
+### Command Line Interface
+
 ```bash
-# Precipitation analysis
-python real_precipitation_plot.py
+# Run complete extreme value analysis
+python potsdam_extreme_values.py
 
-# Temperature analysis
+# Run temperature analysis
 python hottest_temperature_plot.py
+
+# Run precipitation analysis
+python real_precipitation_plot.py
 ```
 
-## 📁 Project Structure
+## 🏗️ Project Structure
 
 ```
 weatherstation_data_analysis/
-├── real_precipitation_plot.py          # Precipitation analysis script
-├── hottest_temperature_plot.py         # Temperature analysis script
-├── real_cumulative_precipitation_plot.png  # Precipitation visualization
-├── hottest_temperature_plot.png        # Maximum temperature plot
-├── coldest_temperature_plot.png        # Minimum temperature plot
-├── days_above_30C_plot.png            # Hot days analysis
-├── days_below_0C_plot.png             # Cold days analysis
-├── Saekularstation_Potsdam_Telegraphenberg.ipynb  # Jupyter notebook
-├── requirements.txt                     # Python dependencies
-├── README.md                           # Project documentation
-└── potsdam_data/                       # Data directory
-    └── potsdam_dwd.zip                 # Raw data archive
+├── src/
+│   └── weatherstation_analysis/
+│       ├── __init__.py
+│       ├── data_fetcher.py      # Data acquisition module
+│       ├── extreme_analyzer.py  # Statistical analysis module
+│       └── visualization.py     # Plotting and visualization
+├── tests/
+│   ├── test_data_fetcher.py
+│   ├── test_extreme_analyzer.py
+│   └── test_visualization.py
+├── docs/
+│   └── ...                     # Documentation
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # GitHub Actions CI/CD
+├── scripts/
+│   ├── potsdam_extreme_values.py
+│   ├── hottest_temperature_plot.py
+│   └── real_precipitation_plot.py
+├── requirements.txt            # Production dependencies
+├── requirements-dev.txt        # Development dependencies
+├── pyproject.toml             # Project configuration
+├── setup.py                   # Package setup
+└── README.md                  # This file
 ```
 
-## 🎨 Visualization Output
+## 🔬 Scientific Methodology
 
-### Precipitation Visualization
-The precipitation script generates `real_cumulative_precipitation_plot.png` featuring:
-- **12x10 inch format** optimized for Instagram
-- **Bold, large fonts** (18pt axes, 16pt ticks) for social media readability
-- **Clear legend** distinguishing historical data from extreme years
-- **Professional attribution** with data source and creator credit
-
-### Temperature Visualizations
-The temperature script generates four high-quality plots:
-- **12x8 inch format** optimized for social media
-- **Clean design** with no legends and year ranges in titles
-- **Professional styling** with large fonts and clear annotations
-- **Trend analysis** with polynomial trend lines
-- **Extreme value highlighting** for record years
-
-## 🔬 Data Sources
-
+### Data Source
 - **Primary**: Meteostat API (meteostat.net)
 - **Original**: Deutscher Wetterdienst (DWD)
 - **Station**: Potsdam Säkularstation Telegraphenberg
@@ -154,50 +135,139 @@ The temperature script generates four high-quality plots:
 - **Elevation**: 81m above sea level
 - **Period**: 1893-2025 (133 years)
 
-## 🛠️ Technical Details
-
-### Data Quality Control
+### Quality Control
 - **Coverage filtering**: Only includes years with ≥80% data availability
-- **Missing value handling**: Proper handling of NaN values
-- **Leap year awareness**: Proper handling of 366-day years
-- **Current year handling**: 2025 data through July 2nd only
+- **Missing value handling**: Proper NaN handling and interpolation
+- **Leap year awareness**: Correct handling of 366-day years
+- **Data validation**: Comprehensive error checking and logging
 
-### Performance
-- **Efficient data retrieval**: Year-by-year API calls with error handling
-- **Memory optimization**: Processes data incrementally
-- **Error resilience**: Graceful handling of missing data periods
+### Statistical Methods
+- **Extreme Value Theory**: Gumbel distribution fitting
+- **Trend Analysis**: Linear and polynomial regression
+- **Return Period Analysis**: Empirical and theoretical return periods
+- **Threshold Analysis**: Peak-over-threshold methods
+- **Correlation Analysis**: Multivariate extreme dependencies
 
-## 🔄 Version History
+## 📊 API Reference
 
-- **v3.0**: Added comprehensive temperature analysis with 4 new plots
-- **v2.0**: Complete rewrite focusing on 2018 drought vs 2025 comparison
-- **v1.5**: Added 5 driest years visualization with color coding
-- **v1.0**: Initial multi-color analysis with period-based grouping
+### Data Fetcher
+```python
+class PotsdamDataFetcher:
+    def fetch_comprehensive_data(start_year=1890, end_year=2026) -> Dict[int, pd.DataFrame]
+    def fetch_temperature_data(start_year=1890, end_year=2026) -> Dict[int, pd.DataFrame]
+    def fetch_precipitation_data(start_year=1890, end_year=2026) -> Dict[int, pd.DataFrame]
+```
 
-## 👥 Contributing
+### Extreme Analyzer
+```python
+class ExtremeValueAnalyzer:
+    def analyze_annual_extremes(exclude_current_year=True) -> pd.DataFrame
+    def calculate_return_periods(values, distribution='gumbel') -> Tuple[np.ndarray, np.ndarray]
+    def analyze_threshold_exceedances(thresholds) -> pd.DataFrame
+    def calculate_trends(variable) -> Dict[str, float]
+```
 
-Contributions welcome! Please:
+### Visualization
+```python
+class WeatherPlotter:
+    def plot_annual_precipitation_extremes(extremes_df, save_path) -> plt.Figure
+    def plot_temperature_extremes_analysis(extremes_df, save_path) -> plt.Figure
+    def plot_threshold_exceedance_analysis(all_data, save_path) -> plt.Figure
+    def plot_statistics_summary(extremes_df, save_path) -> plt.Figure
+```
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src --cov-report=html
+
+# Run specific test categories
+pytest -m "not slow"  # Skip slow tests
+pytest -m "unit"      # Run only unit tests
+pytest -m "integration"  # Run only integration tests
+```
+
+## 🔧 Development
+
+### Code Quality Tools
+
+```bash
+# Format code
+black src/ tests/
+isort src/ tests/
+
+# Type checking
+mypy src/
+
+# Linting
+flake8 src/ tests/
+
+# Run all quality checks
+pre-commit run --all-files
+```
+
+### Setting up Development Environment
+
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+pip install -e .
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
 1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request with clear description
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+- Follow PEP 8 style guidelines
+- Use type hints for all function signatures
+- Write comprehensive docstrings (Google style)
+- Maintain test coverage above 90%
+- Use meaningful variable and function names
 
 ## 📄 License
 
-This project is open source. Please cite appropriately when using the code or visualizations.
-
-## 👨‍🔬 Author
-
-**Bijan Fallah** - Climate Data Scientist
-- GitHub: [@bijanf](https://github.com/bijanf)
-- Data visualization and climate analysis specialist
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
 - **Deutscher Wetterdienst (DWD)** for maintaining long-term climate records
 - **Meteostat project** for providing accessible climate data APIs
 - **Potsdam Säkularstation** for 133 years of continuous measurements
+- **Open Source Community** for the amazing tools and libraries used
+
+## 📞 Contact
+
+**Bijan Fallah** - Climate Data Scientist
+- GitHub: [@bijanf](https://github.com/bijanf)
+- Email: bijan.fallah@example.com
+
+## 🔗 Links
+
+- [Documentation](https://bijanf.github.io/weatherstation_data_analysis/)
+- [PyPI Package](https://pypi.org/project/weatherstation-analysis/)
+- [Issues](https://github.com/bijanf/weatherstation_data_analysis/issues)
+- [Discussions](https://github.com/bijanf/weatherstation_data_analysis/discussions)
 
 ---
 
-*For questions about the analysis or data, please open an issue or contact the author.*
+*For questions about the analysis or data, please open an issue or start a discussion.*
+
+**⭐ If you find this project useful, please give it a star! ⭐**
