@@ -2,7 +2,6 @@
 Tests for data fetcher module.
 """
 
-import pytest
 import pandas as pd
 from unittest.mock import Mock, patch
 from src.weatherstation_analysis.data_fetcher import PotsdamDataFetcher

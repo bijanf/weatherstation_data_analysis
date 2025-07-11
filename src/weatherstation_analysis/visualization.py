@@ -5,7 +5,7 @@ Visualization Module
 Creates publication-quality plots and visualizations for weather data analysis.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -521,12 +521,12 @@ class WeatherPlotter:
         corr_data = extremes_df[
             ["max_precip", "max_temp", "min_temp", "temp_range"]
         ].corr()
-        im = ax2.imshow(corr_data, cmap="coolwarm", aspect="auto", vmin=-1, vmax=1)
+        ax2.imshow(corr_data, cmap="coolwarm", aspect="auto", vmin=-1, vmax=1)
 
         # Add correlation values
         for i in range(len(corr_data)):
             for j in range(len(corr_data)):
-                text = ax2.text(
+                ax2.text(
                     j,
                     i,
                     f"{corr_data.iloc[i, j]:.2f}",

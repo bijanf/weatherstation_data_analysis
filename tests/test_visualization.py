@@ -6,7 +6,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from src.weatherstation_analysis.visualization import WeatherPlotter
 
 

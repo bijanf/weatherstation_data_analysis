@@ -5,10 +5,9 @@ Data Fetcher Module
 Handles fetching weather data from various sources, primarily Meteostat API.
 """
 
-from typing import Dict, Optional, Union, List
+from typing import Dict, List, Optional
 import pandas as pd
-import numpy as np
-from datetime import datetime, date
+from datetime import datetime
 from meteostat import Stations, Daily
 import warnings
 
@@ -127,7 +126,8 @@ class PotsdamDataFetcher:
         if year == 2025 or coverage_percentage >= self.min_coverage:
             status = "(partial year)" if year == 2025 else ""
             print(
-                f"✅ {year}: {actual_days}/{expected_days} days ({coverage_percentage:.1f}%) {status}"
+                f"✅ {year}: {actual_days}/{expected_days} days "
+                f"({coverage_percentage:.1f}%) {status}"
             )
             return True
         else:
@@ -218,11 +218,14 @@ class PotsdamDataFetcher:
                         max_temp = data["tmax"].max()
                         status = "(partial year)" if year == 2025 else ""
                         print(
-                            f"✅ {year}: {actual_days}/{expected_days} days, max: {max_temp:.1f}°C ({coverage_percentage:.1f}%) {status}"
+                            f"✅ {year}: {actual_days}/{expected_days} days, "
+                            f"max: {max_temp:.1f}°C ({coverage_percentage:.1f}%) "
+                            f"{status}"
                         )
                     else:
                         print(
-                            f"❌ {year}: Insufficient coverage ({coverage_percentage:.1f}%)"
+                            f"❌ {year}: Insufficient coverage "
+                            f"({coverage_percentage:.1f}%)"
                         )
                 else:
                     print(f"❌ {year}: No temperature data available")
@@ -278,11 +281,14 @@ class PotsdamDataFetcher:
                         total = daily_prcp.sum()
                         status = "(partial year)" if year == 2025 else ""
                         print(
-                            f"✅ {year}: {actual_days}/{expected_days} days, total: {total:.1f}mm ({coverage_percentage:.1f}%) {status}"
+                            f"✅ {year}: {actual_days}/{expected_days} days, "
+                            f"total: {total:.1f}mm ({coverage_percentage:.1f}%) "
+                            f"{status}"
                         )
                     else:
                         print(
-                            f"❌ {year}: Insufficient coverage ({coverage_percentage:.1f}%)"
+                            f"❌ {year}: Insufficient coverage "
+                            f"({coverage_percentage:.1f}%)"
                         )
                 else:
                     print(f"❌ {year}: No precipitation data available")

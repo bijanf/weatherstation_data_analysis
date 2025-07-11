@@ -5,7 +5,7 @@ Extreme Value Analysis Module
 Performs statistical analysis of extreme weather events and climate data.
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Tuple, Optional
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -95,7 +95,8 @@ class ExtremeValueAnalyzer:
 
         Args:
             values: Array of extreme values
-            distribution: Statistical distribution to use ('gumbel', 'weibull', 'genextreme')
+            distribution: Statistical distribution to use
+                ('gumbel', 'weibull', 'genextreme')
 
         Returns:
             Tuple of (return_periods, theoretical_values)
