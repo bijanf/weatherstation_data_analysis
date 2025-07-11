@@ -257,7 +257,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Bijan Fallah** - Climate Data Scientist
 - GitHub: [@bijanf](https://github.com/bijanf)
-- Email: bijan.fallah@example.com
 
 ## 🔗 Links
 
