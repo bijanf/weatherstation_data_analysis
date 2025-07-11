@@ -2,12 +2,13 @@
 
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI/CD Pipeline](https://github.com/bijanf/weatherstation_data_analysis/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/bijanf/weatherstation_data_analysis/actions)
+[![codecov](https://codecov.io/gh/bijanf/weatherstation_data_analysis/branch/main/graph/badge.svg)](https://codecov.io/gh/bijanf/weatherstation_data_analysis)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](https://mypy-lang.org/)
 [![Linting: flake8](https://img.shields.io/badge/linting-flake8-yellowgreen)](https://flake8.pycqa.org/)
 [![Testing: pytest](https://img.shields.io/badge/testing-pytest-green)](https://docs.pytest.org/)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](https://coverage.readthedocs.io/)
 
 ![Extreme Value Analysis](extreme_statistics_summary.png)
 
