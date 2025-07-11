@@ -24,8 +24,8 @@ class TestWeatherPlotter:
 
     def test_init_custom_values(self):
         """Test initialization with custom values."""
-        plotter = WeatherPlotter(style="seaborn", figsize_default=(10, 6), dpi=150)
-        assert plotter.style == "seaborn"
+        plotter = WeatherPlotter(style="classic", figsize_default=(10, 6), dpi=150)
+        assert plotter.style == "classic"
         assert plotter.figsize_default == (10, 6)
         assert plotter.dpi == 150
 

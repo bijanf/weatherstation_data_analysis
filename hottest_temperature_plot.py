@@ -162,8 +162,8 @@ def create_hottest_temperature_plot(all_data):
             transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
 
     plt.tight_layout()
-    plt.savefig('hottest_temperature_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'hottest_temperature_plot.png'")
+    plt.savefig('plots/hottest_temperature_plot.png', dpi=300, bbox_inches='tight')
+    print("📊 Plot saved as 'plots/hottest_temperature_plot.png'")
     return fig
 
 def create_coldest_temperature_plot(all_data):
@@ -241,8 +241,8 @@ def create_coldest_temperature_plot(all_data):
             transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
 
     plt.tight_layout()
-    plt.savefig('coldest_temperature_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'coldest_temperature_plot.png'")
+    plt.savefig('plots/coldest_temperature_plot.png', dpi=300, bbox_inches='tight')
+    print("📊 Plot saved as 'plots/coldest_temperature_plot.png'")
     return fig
 
 # To generate the coldest temperature plot, fetch tmin instead of tmax in get_real_temperature_data
@@ -321,8 +321,8 @@ def plot_days_above_30C(all_data):
     ax.text(0.99, 0.01, f'Data: Meteostat/DWD\nUpdated: {today.strftime("%d.%m.%Y")}',
             transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
     plt.tight_layout()
-    plt.savefig('days_above_30C_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'days_above_30C_plot.png'")
+    plt.savefig('plots/days_above_30C_plot.png', dpi=300, bbox_inches='tight')
+    print("📊 Plot saved as 'plots/days_above_30C_plot.png'")
     return fig
 
 def plot_days_below_0C(all_data):
@@ -365,8 +365,8 @@ def plot_days_below_0C(all_data):
     ax.text(0.99, 0.01, f'Data: Meteostat/DWD\nUpdated: {today.strftime("%d.%m.%Y")}',
             transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
     plt.tight_layout()
-    plt.savefig('days_below_0C_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'days_below_0C_plot.png'")
+    plt.savefig('plots/days_below_0C_plot.png', dpi=300, bbox_inches='tight')
+    print("📊 Plot saved as 'plots/days_below_0C_plot.png'")
     return fig
 
 # In main(), after creating the hottest and coldest plots, call these new functions:

@@ -10,7 +10,7 @@
 [![Linting: flake8](https://img.shields.io/badge/linting-flake8-yellowgreen)](https://flake8.pycqa.org/)
 [![Testing: pytest](https://img.shields.io/badge/testing-pytest-green)](https://docs.pytest.org/)
 
-![Extreme Value Analysis](extreme_statistics_summary.png)
+![Extreme Value Analysis](plots/extreme_statistics_summary.png)
 
 ## 🌟 Overview
 
@@ -37,17 +37,44 @@ A comprehensive Python package for analyzing weather station data with a focus o
 | Lowest temperature | **-26.8°C** | 1929 |
 | Largest temperature range | **61.5°C** | 1929 |
 
-### 📊 Generated Visualizations
+## 📊 Visualization Gallery
 
-1. **`extreme_precipitation_analysis.png`** - Annual precipitation extremes with return period analysis
-2. **`temperature_extremes_analysis.png`** - Comprehensive temperature extremes (4-panel analysis)
-3. **`threshold_exceedance_analysis.png`** - Frequency of extreme weather events
-4. **`extreme_statistics_summary.png`** - Statistical summary dashboard
-5. **`real_cumulative_precipitation_plot.png`** - Cumulative precipitation comparison
-6. **`hottest_temperature_plot.png`** - Annual maximum temperatures
-7. **`coldest_temperature_plot.png`** - Annual minimum temperatures
-8. **`days_above_30C_plot.png`** - Hot days frequency analysis
-9. **`days_below_0C_plot.png`** - Cold days frequency analysis
+Our analysis generates 9 comprehensive plots that tell the story of 133 years of climate data:
+
+### 🌧️ **Precipitation Analysis**
+
+![Extreme Precipitation Analysis](plots/extreme_precipitation_analysis.png)
+**Extreme Precipitation Analysis** - Shows annual maximum daily precipitation with return period analysis using Gumbel distribution. The plot reveals increasing variability in extreme precipitation events and helps identify 100-year return periods.
+
+![Real Cumulative Precipitation](plots/real_cumulative_precipitation_plot.png)
+**Real Cumulative Precipitation** - Displays cumulative daily precipitation throughout the year for 130+ years of real measurements. Highlights the exceptional drought year 2018 (red line) and current year 2025 (blue line) against historical variability.
+
+### 🌡️ **Temperature Extremes**
+
+![Temperature Extremes Analysis](plots/temperature_extremes_analysis.png)
+**Temperature Extremes Analysis** - Four-panel comprehensive analysis showing: (1) annual maximum temperatures, (2) annual minimum temperatures, (3) temperature range (max-min), and (4) correlation between temperature extremes over time.
+
+![Hottest Temperature Plot](plots/hottest_temperature_plot.png)
+**Hottest Temperature Each Year** - Time series of annual maximum temperatures with polynomial trend line. Shows warming trend with the record high of 38.9°C in 2022.
+
+![Coldest Temperature Plot](plots/coldest_temperature_plot.png)
+**Coldest Temperature Each Year** - Time series of annual minimum temperatures with trend analysis. Reveals winter warming trend with fewer extreme cold events in recent decades.
+
+### 🔥❄️ **Extreme Day Frequency**
+
+![Days Above 30°C](plots/days_above_30C_plot.png)
+**Hot Days Frequency** - Annual count of days with maximum temperature >30°C. Shows increasing frequency of hot days, indicating intensifying heat events.
+
+![Days Below 0°C](plots/days_below_0C_plot.png)
+**Cold Days Frequency** - Annual count of days with minimum temperature <0°C. Demonstrates decreasing frequency of freezing days, consistent with warming trends.
+
+### 📈 **Statistical Summary**
+
+![Extreme Statistics Summary](plots/extreme_statistics_summary.png)
+**Extreme Statistics Summary** - Four-panel dashboard showing: (1) precipitation extremes distribution, (2) temperature extremes box plots, (3) return period analysis, and (4) threshold exceedance trends.
+
+![Threshold Exceedance Analysis](plots/threshold_exceedance_analysis.png)
+**Threshold Exceedance Analysis** - Analyzes frequency of extreme weather events exceeding various thresholds over time. Shows changing patterns in extreme event occurrence across decades.
 
 ## 🚀 Quick Start
 

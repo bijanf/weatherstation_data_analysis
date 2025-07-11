@@ -36,7 +36,7 @@ def plot_annual_precipitation_extremes(extremes_df):
     """
     plotter = WeatherPlotter()
     return plotter.plot_annual_precipitation_extremes(
-        extremes_df, 'extreme_precipitation_analysis.png')
+        extremes_df, 'plots/extreme_precipitation_analysis.png')
 
 def plot_temperature_extremes_analysis(extremes_df):
     """
@@ -44,7 +44,7 @@ def plot_temperature_extremes_analysis(extremes_df):
     """
     plotter = WeatherPlotter()
     return plotter.plot_temperature_extremes_analysis(
-        extremes_df, 'temperature_extremes_analysis.png')
+        extremes_df, 'plots/temperature_extremes_analysis.png')
 
 def plot_threshold_exceedance_analysis(all_data):
     """
@@ -52,7 +52,7 @@ def plot_threshold_exceedance_analysis(all_data):
     """
     plotter = WeatherPlotter()
     return plotter.plot_threshold_exceedance_analysis(
-        all_data, 'threshold_exceedance_analysis.png')
+        all_data, 'plots/threshold_exceedance_analysis.png')
 
 def plot_extreme_statistics_summary(extremes_df):
     """
@@ -60,7 +60,7 @@ def plot_extreme_statistics_summary(extremes_df):
     """
     plotter = WeatherPlotter()
     return plotter.plot_statistics_summary(
-        extremes_df, 'extreme_statistics_summary.png')
+        extremes_df, 'plots/extreme_statistics_summary.png')
 
 def main():
     """
@@ -101,10 +101,10 @@ def main():
     
     print(f"\n✅ Analysis complete! 4 extreme value plots created.")
     print(f"📊 Files saved:")
-    print(f"   • extreme_precipitation_analysis.png")
-    print(f"   • temperature_extremes_analysis.png")
-    print(f"   • threshold_exceedance_analysis.png")
-    print(f"   • extreme_statistics_summary.png")
+    print(f"   • plots/extreme_precipitation_analysis.png")
+    print(f"   • plots/temperature_extremes_analysis.png")
+    print(f"   • plots/threshold_exceedance_analysis.png")
+    print(f"   • plots/extreme_statistics_summary.png")
 
 if __name__ == "__main__":
     main()

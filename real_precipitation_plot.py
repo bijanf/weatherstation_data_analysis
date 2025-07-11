@@ -187,8 +187,8 @@ def create_real_cumulative_plot(all_data):
            color='gray', alpha=0.7)
     
     plt.tight_layout()
-    plt.savefig('real_cumulative_precipitation_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'real_cumulative_precipitation_plot.png'")
+    plt.savefig('plots/real_cumulative_precipitation_plot.png', dpi=300, bbox_inches='tight')
+    print("📊 Plot saved as 'plots/real_cumulative_precipitation_plot.png'")
     
     return fig
 
