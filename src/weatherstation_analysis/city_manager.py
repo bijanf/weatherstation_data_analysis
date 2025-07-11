@@ -6,14 +6,14 @@ Handles city name resolution, fuzzy matching, and station discovery for German c
 """
 
 import difflib
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from meteostat import Stations
 import pandas as pd
 
 
 class CityManager:
     """Manages city-based weather station lookup and fuzzy matching."""
-    
+
     def __init__(self):
         """Initialize the city manager with German city database."""
         # Major German cities with approximate coordinates
@@ -47,72 +47,68 @@ class CityManager:
             "erfurt": {"lat": 50.9848, "lon": 11.0299, "name": "Erfurt"},
             "magdeburg": {"lat": 52.1205, "lon": 11.6276, "name": "Magdeburg"},
         }
-    
+
     def find_city_match(self, city_input: str) -> Optional[Dict]:
         """
         Find the best matching city using fuzzy matching.
-        
+
         Args:
             city_input: User input city name
-            
+
         Returns:
             Dictionary with city info or None if no good match
         """
         city_lower = city_input.lower().strip()
-        
+
         # Exact match first
         if city_lower in self.german_cities:
             return self.german_cities[city_lower]
-        
+
         # Fuzzy matching
         city_names = list(self.german_cities.keys())
-        matches = difflib.get_close_matches(
-            city_lower, city_names, n=1, cutoff=0.6
-        )
-        
+        matches = difflib.get_close_matches(city_lower, city_names, n=1, cutoff=0.6)
+
         if matches:
             return self.german_cities[matches[0]]
-        
+
         return None
-    
+
     def get_suggestions(self, city_input: str, n: int = 3) -> List[str]:
         """
         Get city name suggestions for partial/incorrect input.
-        
+
         Args:
             city_input: User input city name
             n: Number of suggestions to return
-            
+
         Returns:
             List of suggested city names
         """
         city_lower = city_input.lower().strip()
         city_names = list(self.german_cities.keys())
-        
-        suggestions = difflib.get_close_matches(
-            city_lower, city_names, n=n, cutoff=0.3
-        )
-        
+
+        suggestions = difflib.get_close_matches(city_lower, city_names, n=n, cutoff=0.3)
+
         # Return the display names
         return [self.german_cities[name]["name"] for name in suggestions]
-    
+
     def find_stations_near_city(
         self, city_name: str, radius_km: int = 50
     ) -> Optional[pd.DataFrame]:
         """
         Find weather stations near a given city.
-        
+
         Args:
             city_name: Name of the city
             radius_km: Search radius in kilometers
-            
+
         Returns:
             DataFrame with station information or None
         """
         city_info = self.find_city_match(city_name)
         if not city_info:
             return None
-        
+
         try:
             # Get stations within radius
             stations = Stations()
@@ -120,31 +116,34 @@ class CityManager:
                 city_info["lat"], city_info["lon"], radius_km * 1000
             )  # Convert to meters
             stations_df = stations.fetch()
-            
+
             if not stations_df.empty:
                 # Add distance information
                 stations_df["distance_km"] = (
-                    ((stations_df["latitude"] - city_info["lat"]) ** 2 +
-                     (stations_df["longitude"] - city_info["lon"]) ** 2) ** 0.5
+                    (
+                        (stations_df["latitude"] - city_info["lat"]) ** 2
+                        + (stations_df["longitude"] - city_info["lon"]) ** 2
+                    )
+                    ** 0.5
                 ) * 111  # Rough conversion to km
-                
+
                 # Sort by distance
                 stations_df = stations_df.sort_values("distance_km")
-                
+
                 print(f"📍 Found {len(stations_df)} stations near {city_info['name']}")
                 return stations_df
             else:
                 print(f"❌ No stations found near {city_info['name']}")
                 return None
-                
+
         except Exception as e:
             print(f"❌ Error finding stations: {e}")
             return None
-    
+
     def get_city_info(self, city_name: str) -> Optional[Dict]:
         """Get city information including coordinates."""
         return self.find_city_match(city_name)
-    
+
     def list_available_cities(self) -> List[str]:
         """List all available German cities."""
         unique_cities = set()

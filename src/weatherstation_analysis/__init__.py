@@ -12,9 +12,9 @@ from .visualization import WeatherPlotter
 from .city_manager import CityManager
 
 __all__ = [
-    "PotsdamDataFetcher", 
-    "WeatherDataFetcher", 
-    "ExtremeValueAnalyzer", 
-    "WeatherPlotter", 
-    "CityManager"
+    "PotsdamDataFetcher",
+    "WeatherDataFetcher",
+    "ExtremeValueAnalyzer",
+    "WeatherPlotter",
+    "CityManager",
 ]
