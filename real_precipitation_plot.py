@@ -43,7 +43,7 @@ def get_real_precipitation_data():
         start = datetime(year, 1, 1)
         # For 2025, only get data up to current date
         if year == 2025:
-            end = datetime(2025, 7, 2)  # Up to July 2nd
+            end = datetime(2025, 7, 11)  # Up to July 2nd
         else:
             end = datetime(year, 12, 31)
         
