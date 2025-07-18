@@ -1,0 +1,164 @@
+# ERA5 Precipitation Forecasting Configuration
+
+# Location Configuration
+location:
+  name: "Potsdam"
+  latitude: 52.3833
+  longitude: 13.0667
+  timezone: "Europe/Berlin"
+
+# Data Configuration
+data:
+  # ERA5 parameters
+  era5:
+    variables:
+      - "total_precipitation"
+      - "2m_temperature"
+      - "mean_sea_level_pressure"
+      - "10m_u_component_of_wind"
+      - "10m_v_component_of_wind"
+      - "2m_dewpoint_temperature"
+    
+    # Spatial extent (degrees)
+    spatial_extent:
+      north: 54.0
+      south: 51.0
+      east: 15.0
+      west: 11.0
+    
+    # Temporal coverage
+    start_year: 1940
+    end_year: 2024
+    
+    # Data resolution
+    temporal_resolution: "daily"
+    spatial_resolution: "0.25"  # degrees
+  
+  # Historical station data
+  station:
+    source: "meteostat"
+    station_id: "10381"  # Potsdam station
+    variables: ["precipitation", "temperature", "pressure"]
+
+# Model Configuration
+models:
+  # Baseline models
+  baseline:
+    - "climatology"
+    - "linear_trend"
+    - "seasonal_naive"
+    - "moving_average"
+  
+  # Classical ML models
+  classical:
+    - "arima"
+    - "seasonal_arima"
+    - "exponential_smoothing"
+    - "prophet"
+  
+  # Machine Learning models
+  ml:
+    - "random_forest"
+    - "xgboost"
+    - "lightgbm"
+    - "support_vector_regression"
+  
+  # Deep Learning models
+  deep_learning:
+    - "lstm"
+    - "gru"
+    - "transformer"
+    - "cnn_lstm"
+    - "attention_lstm"
+
+# Training Configuration
+training:
+  # Cross-validation
+  cv_folds: 5
+  test_size: 0.2
+  validation_size: 0.2
+  
+  # Feature engineering
+  features:
+    lag_days: [1, 7, 14, 30, 90, 365]
+    rolling_windows: [7, 14, 30, 90]
+    seasonal_features: true
+    cyclical_features: true
+    weather_indices: true
+  
+  # Model-specific parameters
+  lstm:
+    sequence_length: 90
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+    learning_rate: 0.001
+    batch_size: 32
+    epochs: 100
+    patience: 10
+  
+  xgboost:
+    n_estimators: 1000
+    max_depth: 6
+    learning_rate: 0.01
+    subsample: 0.8
+    colsample_bytree: 0.8
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "rmse"
+    - "mae"
+    - "mape"
+    - "r2"
+    - "skill_score"
+  
+  # Forecast horizons (days)
+  horizons: [30, 60, 90, 120, 150, 180]
+  
+  # Uncertainty quantification
+  uncertainty:
+    method: "quantile_regression"
+    confidence_intervals: [0.1, 0.2, 0.3, 0.4]
+
+# Visualization Configuration
+visualization:
+  # Plot settings
+  plots:
+    dpi: 300
+    figsize: [12, 8]
+    style: "seaborn-v0_8"
+    colors: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+  
+  # Dashboard settings
+  dashboard:
+    update_frequency: "daily"
+    forecast_display_days: 365
+    historical_display_years: 10
+
+# Operational Configuration
+operational:
+  # Forecast schedule
+  forecast_schedule:
+    frequency: "daily"
+    time: "06:00"
+    timezone: "UTC"
+  
+  # Data update schedule
+  data_update:
+    era5_lag_days: 5  # ERA5 has ~5-day delay
+    station_lag_days: 1
+  
+  # Model retraining
+  retraining:
+    frequency: "monthly"
+    trigger_threshold: 0.1  # Performance degradation threshold
+    
+# Paths
+paths:
+  data_raw: "data/raw"
+  data_processed: "data/processed"
+  data_forecasts: "data/forecasts"
+  models: "models"
+  results: "results"
+  logs: "logs"
