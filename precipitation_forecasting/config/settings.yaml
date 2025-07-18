@@ -9,6 +9,11 @@ location:
 
 # Data Configuration
 data:
+  # PIK Cluster ERA5 data paths
+  cluster_paths:
+    era5_base: "/p/projects/climate_data_central/reanalysis/ERA5"
+    era5_land_base: "/p/projects/climate_data_central/reanalysis/ERA5-Land"
+    
   # ERA5 parameters
   era5:
     variables:
