@@ -42,7 +42,7 @@ def get_precipitation_data():
         start = datetime(year, 1, 1)
         # For 2025, only get data up to current date
         if year == 2025:
-            end = datetime(2025, 7, 13)  # Up to July 2nd
+            end = datetime(2025, 10, 7)  # Up to October 7th
         else:
             end = datetime(year, 12, 31)
         
@@ -53,8 +53,8 @@ def get_precipitation_data():
             if not data.empty and 'prcp' in data.columns:
                 # Calculate expected days for the year
                 if year == 2025:
-                    # For 2025, calculate up to July 2nd
-                    expected_days = 183  # Days from Jan 1 to July 2
+                    # For 2025, calculate up to October 7th
+                    expected_days = 280  # Days from Jan 1 to October 7
                 else:
                     # Full year: check if leap year
                     expected_days = 366 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 365
