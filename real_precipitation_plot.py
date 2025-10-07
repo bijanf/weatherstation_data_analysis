@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Real Cumulative Daily Precipitation Plot for Potsdam
-Uses ONLY real data - no synthetic data generation.
+Cumulative Daily Precipitation Analysis for Potsdam
+Historical precipitation patterns from 130+ years of measurements.
 """
 
 import pandas as pd
@@ -12,12 +12,11 @@ from meteostat import Stations, Daily
 import warnings
 warnings.filterwarnings('ignore')
 
-def get_real_precipitation_data():
+def get_precipitation_data():
     """
-    Get REAL daily precipitation data for Potsdam station using Meteostat.
-    No synthetic data generation.
+    Fetch daily precipitation data for Potsdam station using Meteostat.
     """
-    print("🌧️ Fetching REAL daily precipitation data for Potsdam...")
+    print("🌧️ Fetching daily precipitation data for Potsdam...")
     
     # Get the station
     stations = Stations()
@@ -32,13 +31,13 @@ def get_real_precipitation_data():
     station_name = station.loc[station_id, 'name']
     print(f"📍 Station: {station_name}")
     print(f"📍 Coordinates: {station.loc[station_id, 'latitude']:.4f}°N, {station.loc[station_id, 'longitude']:.4f}°E")
-    
-    # Get real daily data for all available years (100+ years)
-    years_to_analyze = list(range(1890, 2026))  # Try to get as much historical data as possible
+
+    # Get daily data for all available years
+    years_to_analyze = list(range(1890, 2026))
     all_data = {}
-    
+
     for year in years_to_analyze:
-        print(f"📡 Downloading real data for {year}...")
+        print(f"📡 Downloading data for {year}...")
         
         start = datetime(year, 1, 1)
         # For 2025, only get data up to current date
@@ -64,10 +63,10 @@ def get_real_precipitation_data():
                 non_null_data = data['prcp'].dropna()
                 actual_days = len(non_null_data)
                 coverage_percentage = (actual_days / expected_days) * 100
-                
+
                 # Only include years with at least 80% coverage (or 2025 regardless of coverage)
                 if year == 2025 or coverage_percentage >= 80.0:
-                    # Use real precipitation data, fill NaN with 0 (no precipitation)
+                    # Fill NaN with 0 (no precipitation)
                     daily_prcp = data['prcp'].fillna(0.0)
                     all_data[year] = daily_prcp
                     total = daily_prcp.sum()
@@ -77,28 +76,28 @@ def get_real_precipitation_data():
                     print(f"❌ {year}: Insufficient coverage ({actual_days}/{expected_days} days = {coverage_percentage:.1f}%)")
             else:
                 print(f"❌ {year}: No precipitation data available")
-                
+
         except Exception as e:
             print(f"❌ {year}: Error downloading data - {e}")
-    
+
     if not all_data:
-        print("❌ No real data could be retrieved")
+        print("❌ No data could be retrieved")
         return None
-        
-    print(f"\n✅ Successfully retrieved real data for {len(all_data)} years")
+
+    print(f"\n✅ Successfully retrieved data for {len(all_data)} years")
     return all_data
 
-def create_real_cumulative_plot(all_data):
+def create_cumulative_plot(all_data):
     """
-    Create cumulative daily precipitation plot using ONLY real data.
+    Create cumulative daily precipitation plot.
     """
     if not all_data:
         print("❌ No data to plot")
         return None
-        
+
     plt.style.use('default')
-    
-    # Create figure optimized for Instagram (slightly more square)
+
+    # Create figure optimized for social media
     fig, ax = plt.subplots(1, 1, figsize=(12, 10))
     
     # Colors: all years in gray except 2025 in blue
@@ -144,16 +143,16 @@ def create_real_cumulative_plot(all_data):
         
         max_precip = max(max_precip, cumulative.max())
         
-        # Add final total annotation for 2025 in lower white space
+        # Add data source annotation
         final_total = cumulative.iloc[-1]
-        ax.text(0.98, 0.08, f' Data: Real measurements from Meteostat/DWD', 
+        ax.text(0.98, 0.08, f'Data: Meteostat/DWD',
                transform=ax.transAxes, ha='right', va='bottom', fontsize=12, fontweight='bold',
                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', edgecolor='darkblue', linewidth=2, alpha=0.95))
-    
-    # Customize the plot with bigger labels for Instagram
+
+    # Customize the plot
     ax.set_xlabel('Month', fontsize=18, fontweight='bold')
-    ax.set_ylabel('mm', fontsize=18, fontweight='bold')
-    ax.set_title('Cumulative Daily Precipitation - Potsdam Station, Germany\n(130+ Years of Real Climate Data)', 
+    ax.set_ylabel('Cumulative Precipitation (mm)', fontsize=18, fontweight='bold')
+    ax.set_title('Cumulative Daily Precipitation — Potsdam, Germany\n130+ Years of Climate History (1893-2025)',
                 fontsize=18, fontweight='bold', pad=25)
     
     # Set x-axis to show months with bigger font for Instagram
@@ -187,44 +186,40 @@ def create_real_cumulative_plot(all_data):
            color='gray', alpha=0.7)
     
     plt.tight_layout()
-    plt.savefig('plots/real_cumulative_precipitation_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'plots/real_cumulative_precipitation_plot.png'")
-    
+    plt.savefig('plots/cumulative_precipitation_plot.png', dpi=300, bbox_inches='tight')
+    print("📊 Plot saved as 'plots/cumulative_precipitation_plot.png'")
+
     return fig
 
 def main():
     """
-    Main function - uses ONLY real data.
+    Main function to generate cumulative precipitation analysis.
     """
-    print("🌧️ REAL CUMULATIVE DAILY PRECIPITATION ANALYSIS")
+    print("🌧️ CUMULATIVE DAILY PRECIPITATION ANALYSIS")
     print("="*60)
-    print("Potsdam Station - REAL Data Only (No Synthetic Data)")
+    print("Potsdam Säkularstation, Germany")
     print("Data Source: Meteostat/DWD")
     print("="*60)
-    
-    # Get ONLY real data
-    real_data = get_real_precipitation_data()
-    
-    if not real_data:
-        print("\n❌ ERROR: No real data available")
-        print("Cannot create plot without real measurements")
+
+    # Fetch precipitation data
+    data = get_precipitation_data()
+
+    if not data:
+        print("\n❌ ERROR: No data available")
         return
-    
-    # Create plot with real data only
-    print(f"\n📊 Creating plot with REAL data for {len(real_data)} years...")
-    create_real_cumulative_plot(real_data)
-    
-    print(f"\n✅ Analysis complete using REAL data only!")
-    print(f"📈 Real precipitation plot saved")
-    print(f"\n📋 REAL Data Summary:")
-    for year, data in sorted(real_data.items()):
-        total = data.sum()
-        data_points = len(data)
-        status = "🔵 (incomplete year)" if year == 2025 else ""
-        print(f"   • {year}: {total:.1f}mm ({data_points} days of real measurements) {status}")
-    
-    print(f"\n⚠️  IMPORTANT: This plot shows ONLY real precipitation measurements")
-    print(f"    No synthetic or artificial data was generated.")
+
+    # Create plot
+    print(f"\n📊 Creating plot for {len(data)} years...")
+    create_cumulative_plot(data)
+
+    print(f"\n✅ Analysis complete!")
+    print(f"📈 Precipitation plot saved")
+    print(f"\n📋 Data Summary:")
+    for year, year_data in sorted(data.items()):
+        total = year_data.sum()
+        data_points = len(year_data)
+        status = "🔵 (partial year)" if year == 2025 else ""
+        print(f"   • {year}: {total:.1f}mm ({data_points} days) {status}")
 
 if __name__ == "__main__":
     main() 

@@ -46,8 +46,8 @@ Our analysis generates 9 comprehensive plots that tell the story of 133 years of
 ![Extreme Precipitation Analysis](plots/extreme_precipitation_analysis.png)
 **Extreme Precipitation Analysis** - Shows annual maximum daily precipitation with return period analysis using Gumbel distribution. The plot reveals increasing variability in extreme precipitation events and helps identify 100-year return periods.
 
-![Real Cumulative Precipitation](plots/real_cumulative_precipitation_plot.png)
-**Real Cumulative Precipitation** - Displays cumulative daily precipitation throughout the year for 130+ years of real measurements. Highlights the exceptional drought year 2018 (red line) and current year 2025 (blue line) against historical variability.
+![Cumulative Precipitation](plots/cumulative_precipitation_plot.png)
+**Cumulative Precipitation** - Displays cumulative daily precipitation throughout the year for 130+ years of measurements. Highlights the exceptional drought year 2018 (red line) and current year 2025 (blue line) against historical variability.
 
 ### 🌡️ **Temperature Extremes**
 
