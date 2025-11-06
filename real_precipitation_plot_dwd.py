@@ -1,81 +1,93 @@
 #!/usr/bin/env python3
 """
-Cumulative Daily Precipitation Analysis for Potsdam
-Historical precipitation patterns from 130+ years of measurements.
+Cumulative Daily Precipitation Analysis for Potsdam - DWD Version
+Uses wetterdienst to access DWD (German Weather Service) data directly.
+This version works when Meteostat API is unavailable.
 """
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, date
-from meteostat import Stations, Daily
+from wetterdienst import Parameter, Period, Resolution
+from wetterdienst.provider.dwd.observation import DwdObservationRequest
 import warnings
 warnings.filterwarnings('ignore')
 
-def get_precipitation_data():
+def get_precipitation_data_dwd():
     """
-    Fetch daily precipitation data for Potsdam station using Meteostat.
+    Fetch daily precipitation data for Potsdam station using DWD directly.
+    Station ID: 02925 (Potsdam)
     """
-    print("🌧️ Fetching daily precipitation data for Potsdam...")
-    
-    # Get the station
-    stations = Stations()
-    stations = stations.nearby(52.3833, 13.0667)  # Potsdam Säkularstation coordinates
-    station = stations.fetch(1)
-    
-    if station.empty:
-        print("❌ No station found")
-        return None
-    
-    station_id = station.index[0]
-    station_name = station.loc[station_id, 'name']
-    print(f"📍 Station: {station_name}")
-    print(f"📍 Coordinates: {station.loc[station_id, 'latitude']:.4f}°N, {station.loc[station_id, 'longitude']:.4f}°E")
+    print("🌧️ Fetching daily precipitation data for Potsdam from DWD...")
 
-    # Get daily data for all available years
+    # Potsdam station ID
+    station_id = "02925"
+
+    print(f"📍 Station: Potsdam (ID: {station_id})")
+
+    # Get data for all available years
     years_to_analyze = list(range(1890, 2026))
     all_data = {}
 
     for year in years_to_analyze:
         print(f"📡 Downloading data for {year}...")
-        
+
         start = datetime(year, 1, 1)
-        # For 2025, only get data up to current date
+        # For 2025, only get data up to November 5th
         if year == 2025:
-            end = datetime(2025, 11, 5)  # Up to November 5th
+            end = datetime(2025, 11, 5)
         else:
             end = datetime(year, 12, 31)
-        
-        try:
-            data = Daily(station_id, start, end)
-            data = data.fetch()
-            
-            if not data.empty and 'prcp' in data.columns:
-                # Calculate expected days for the year
-                if year == 2025:
-                    # For 2025, calculate up to November 5th
-                    expected_days = 309  # Days from Jan 1 to November 5
-                else:
-                    # Full year: check if leap year
-                    expected_days = 366 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 365
-                
-                # Count actual non-null precipitation data points
-                non_null_data = data['prcp'].dropna()
-                actual_days = len(non_null_data)
-                coverage_percentage = (actual_days / expected_days) * 100
 
-                # Only include years with at least 80% coverage (or 2025 regardless of coverage)
-                if year == 2025 or coverage_percentage >= 80.0:
-                    # Fill NaN with 0 (no precipitation)
-                    daily_prcp = data['prcp'].fillna(0.0)
-                    all_data[year] = daily_prcp
-                    total = daily_prcp.sum()
-                    status = "(partial year)" if year == 2025 else ""
-                    print(f"✅ {year}: {actual_days}/{expected_days} days, total: {total:.1f}mm, coverage: {coverage_percentage:.1f}% {status}")
+        try:
+            # Request precipitation data from DWD
+            request = DwdObservationRequest(
+                parameter=[Parameter.PRECIPITATION_HEIGHT],
+                resolution=Resolution.DAILY,
+                start_date=start,
+                end_date=end,
+            ).filter_by_station_id(station_id=station_id)
+
+            # Fetch the data
+            df = request.values.all().df
+
+            if not df.empty:
+                # Convert to daily precipitation series
+                df['date'] = pd.to_datetime(df['date'])
+                df = df.set_index('date')
+
+                # Get precipitation column (value)
+                if 'value' in df.columns:
+                    daily_prcp = df['value']
+
+                    # Calculate expected days for the year
+                    if year == 2025:
+                        # For 2025, calculate up to November 5th
+                        expected_days = 309  # Days from Jan 1 to November 5
+                    else:
+                        # Full year: check if leap year
+                        expected_days = 366 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 365
+
+                    # Count actual non-null precipitation data points
+                    non_null_data = daily_prcp.dropna()
+                    actual_days = len(non_null_data)
+                    coverage_percentage = (actual_days / expected_days) * 100
+
+                    # Only include years with at least 80% coverage (or 2025 regardless of coverage)
+                    if year == 2025 or coverage_percentage >= 80.0:
+                        # Fill NaN with 0 (no precipitation)
+                        daily_prcp = daily_prcp.fillna(0.0)
+                        all_data[year] = daily_prcp
+                        total = daily_prcp.sum()
+                        status = "(partial year)" if year == 2025 else ""
+                        print(f"✅ {year}: {actual_days}/{expected_days} days, total: {total:.1f}mm, coverage: {coverage_percentage:.1f}% {status}")
+                    else:
+                        print(f"❌ {year}: Insufficient coverage ({actual_days}/{expected_days} days = {coverage_percentage:.1f}%)")
                 else:
-                    print(f"❌ {year}: Insufficient coverage ({actual_days}/{expected_days} days = {coverage_percentage:.1f}%)")
+                    print(f"❌ {year}: No precipitation data available")
             else:
-                print(f"❌ {year}: No precipitation data available")
+                print(f"❌ {year}: No data returned")
 
         except Exception as e:
             print(f"❌ {year}: Error downloading data - {e}")
@@ -99,53 +111,53 @@ def create_cumulative_plot(all_data):
 
     # Create figure optimized for social media
     fig, ax = plt.subplots(1, 1, figsize=(12, 10))
-    
+
     # Colors: all years in gray except 2025 in blue
     max_precip = 0
     years_list = sorted(all_data.keys())
     first_year = min(years_list)
     last_year = max([y for y in years_list if y != 2025]) if 2025 in years_list else max(years_list)
-    
+
     # Plot all years except 2018 and 2025 in gray
     gray_plotted = False
-    
+
     for year in years_list:
         if year != 2025:
             daily_data = all_data[year]
             cumulative = daily_data.cumsum()
-            
+
             # Create day-of-year index
             day_of_year = [d.timetuple().tm_yday for d in daily_data.index]
-            
+
             if year == 2018:
                 # 2018 in red (driest year on record)
-                ax.plot(day_of_year, cumulative, 
+                ax.plot(day_of_year, cumulative,
                         color='#FF0000', linewidth=3, alpha=1.0, label='2018 (346mm)')
             else:
                 # All other years in gray
-                label = '1893-2024 (all other years)' if not gray_plotted else None
+                label = f'{first_year}-{last_year} (all other years)' if not gray_plotted else None
                 gray_plotted = True
-                ax.plot(day_of_year, cumulative, 
+                ax.plot(day_of_year, cumulative,
                         color='#808080', linewidth=1.0, alpha=0.4, label=label)
-            
+
             max_precip = max(max_precip, cumulative.max())
-    
+
     # Plot 2025 in blue (if available)
     if 2025 in all_data:
         daily_data = all_data[2025]
         cumulative = daily_data.cumsum()
-        
+
         # Create day-of-year index
         day_of_year = [d.timetuple().tm_yday for d in daily_data.index]
-        
-        ax.plot(day_of_year, cumulative, 
+
+        ax.plot(day_of_year, cumulative,
                 color='#000080', linewidth=3, alpha=1.0, label='2025')
-        
+
         max_precip = max(max_precip, cumulative.max())
-        
+
         # Add data source annotation
         final_total = cumulative.iloc[-1]
-        ax.text(0.98, 0.08, f'Data: Meteostat/DWD',
+        ax.text(0.98, 0.08, f'Data: DWD (German Weather Service)',
                transform=ax.transAxes, ha='right', va='bottom', fontsize=12, fontweight='bold',
                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', edgecolor='darkblue', linewidth=2, alpha=0.95))
 
@@ -154,37 +166,37 @@ def create_cumulative_plot(all_data):
     ax.set_ylabel('Cumulative Precipitation (mm)', fontsize=18, fontweight='bold')
     ax.set_title('Cumulative Daily Precipitation — Potsdam, Germany\n130+ Years of Climate History (1893-2025)',
                 fontsize=18, fontweight='bold', pad=25)
-    
+
     # Set x-axis to show months with bigger font for Instagram
     month_starts = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
-    month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+    month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     ax.set_xticks(month_starts)
     ax.set_xticklabels(month_labels, fontsize=16, fontweight='bold')
-    
+
     # Make y-axis labels bigger and bold for Instagram
     ax.tick_params(axis='y', labelsize=16)
     for label in ax.get_yticklabels():
         label.set_fontweight('bold')
-    
+
     # Set y-axis limits
     ax.set_ylim(0, max_precip * 1.1)
-    
+
     # Add enhanced grid for better readability
     ax.grid(True, alpha=0.4, linewidth=0.8)
-    
+
     # Add legend with bigger font for Instagram
     legend = ax.legend(loc='upper left', frameon=True, fancybox=True, shadow=True, fontsize=16)
     # Make legend text bold
     for text in legend.get_texts():
         text.set_fontweight('bold')
-    
+
     # Add update date in top right (smaller and less intrusive)
     today = date.today()
-    ax.text(0.98, 0.98, f'Updated: {today.strftime("%d.%m.%Y")}', 
-           transform=ax.transAxes, ha='right', va='top', fontsize=10, 
+    ax.text(0.98, 0.98, f'Updated: {today.strftime("%d.%m.%Y")}',
+           transform=ax.transAxes, ha='right', va='top', fontsize=10,
            color='gray', alpha=0.7)
-    
+
     plt.tight_layout()
     plt.savefig('plots/cumulative_precipitation_plot.png', dpi=300, bbox_inches='tight')
     print("📊 Plot saved as 'plots/cumulative_precipitation_plot.png'")
@@ -197,12 +209,12 @@ def main():
     """
     print("🌧️ CUMULATIVE DAILY PRECIPITATION ANALYSIS")
     print("="*60)
-    print("Potsdam Säkularstation, Germany")
-    print("Data Source: Meteostat/DWD")
+    print("Potsdam, Germany")
+    print("Data Source: DWD (Deutscher Wetterdienst)")
     print("="*60)
 
     # Fetch precipitation data
-    data = get_precipitation_data()
+    data = get_precipitation_data_dwd()
 
     if not data:
         print("\n❌ ERROR: No data available")
@@ -222,4 +234,4 @@ def main():
         print(f"   • {year}: {total:.1f}mm ({data_points} days) {status}")
 
 if __name__ == "__main__":
-    main() 
+    main()
