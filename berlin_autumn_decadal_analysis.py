@@ -288,7 +288,7 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     ax_title = fig.add_subplot(gs[0])
     ax_title.axis('off')
 
-    ax_title.text(0.5, 0.7, "BERLIN'S DISAPPEARING FROST",
+    ax_title.text(0.5, 0.7, "POTSDAM'S DISAPPEARING FROST",
                  ha='center', va='center', fontsize=32, fontweight='black',
                  color='#1a1a1a')
 
@@ -408,7 +408,7 @@ def generate_decadal_caption(decadal_stats, trend_stats, era_comparison):
     """
     Generate a punchy caption for Bluesky post emphasizing systematic change.
     """
-    caption = "🔥 BERLIN'S DISAPPEARING FROST — NOVEMBER ANALYSIS 🔥\n\n"
+    caption = "🔥 POTSDAM'S DISAPPEARING FROST — NOVEMBER ANALYSIS 🔥\n\n"
 
     caption += f"November frost days over 13 decades:\n\n"
 
