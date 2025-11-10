@@ -278,7 +278,7 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
 
     # Create the figure
     fig = plt.figure(figsize=(12, 16), facecolor='white')
-    gs = GridSpec(5, 1, height_ratios=[1, 2, 2, 1.5, 0.4], hspace=0.45)
+    gs = GridSpec(4, 1, height_ratios=[1, 2, 2, 0.4], hspace=0.45)
 
     # ============ PANEL 1: HEADLINE ============
     ax_title = fig.add_subplot(gs[0])
@@ -327,31 +327,15 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
 
     # Add trend line
     trend_line = [trend_stats['intercept'] + trend_stats['slope'] * d for d in decades]
-    ax_bars.plot(x, trend_line, 'k--', linewidth=3, alpha=0.7,
-                label=f"Trend: {trend_stats['slope']:.2f} days/decade (R²={trend_stats['r_squared']:.2f})")
+    ax_bars.plot(x, trend_line, 'k--', linewidth=3, alpha=0.7)
 
     ax_bars.set_ylabel('Frost Days (Oct + Nov)', fontsize=13, fontweight='bold')
     ax_bars.set_title(f'Decadal Averages: {trend_stats["absolute_change"]:.1f} Day Decline ({trend_stats["percent_change"]:+.0f}%)',
                      fontsize=15, fontweight='bold', pad=20)
     ax_bars.set_xticks(x)
     ax_bars.set_xticklabels([f"{d}s" for d in decades], rotation=45, ha='right', fontsize=10)
-    ax_bars.legend(loc='upper right', fontsize=11, frameon=True, fancybox=True)
     ax_bars.grid(axis='y', alpha=0.3, linestyle='--')
     ax_bars.set_ylim(0, max(means) * 1.3)
-
-    # Add significance marker
-    if trend_stats['p_value'] < 0.001:
-        sig_text = '*** p < 0.001 (highly significant)'
-    elif trend_stats['p_value'] < 0.01:
-        sig_text = '** p < 0.01 (very significant)'
-    elif trend_stats['p_value'] < 0.05:
-        sig_text = '* p < 0.05 (significant)'
-    else:
-        sig_text = 'not statistically significant'
-
-    ax_bars.text(0.02, 0.98, sig_text, transform=ax_bars.transAxes,
-                fontsize=10, va='top', ha='left',
-                bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7))
 
     # ============ PANEL 3: INDIVIDUAL YEARS SCATTER ============
     ax_scatter = fig.add_subplot(gs[2])
@@ -389,36 +373,8 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     ax_scatter.set_xlim(1890, 2027)
     ax_scatter.set_ylim(-2, max(values) * 1.1)
 
-    # ============ PANEL 4: KEY STATISTICS ============
-    ax_stats = fig.add_subplot(gs[3])
-    ax_stats.axis('off')
-
-    box_props = dict(boxstyle='round,pad=0.8', facecolor='#fff3cd', edgecolor='#856404', linewidth=2.5, alpha=0.9)
-
-    # Callout 1: Trend
-    callout1 = f"📉 LINEAR TREND\n{trend_stats['slope']:.2f} days/decade\nR² = {trend_stats['r_squared']:.2f}"
-
-    # Callout 2: Total change
-    callout2 = f"📊 TOTAL CHANGE\n{trend_stats['first_decade']}s → {trend_stats['last_decade']}s\n{trend_stats['percent_change']:+.0f}% change"
-
-    # Callout 3: Era comparison
-    callout3 = f"🔄 ERA COMPARISON\nPre-1950: {era_comparison['early_mean']:.1f} days\nPost-2000: {era_comparison['recent_mean']:.1f} days"
-
-    # Callout 4: Most recent decade
-    recent_decade = decades[-1]
-    recent_mean = decadal_stats[recent_decade]['mean']
-    callout4 = f"🌡️ {recent_decade}s AVERAGE\n{recent_mean:.1f} frost days\n({decadal_stats[recent_decade]['n_years']} years)"
-
-    callouts = [callout1, callout2, callout3, callout4]
-    positions = [(0.125, 0.5), (0.375, 0.5), (0.625, 0.5), (0.875, 0.5)]
-
-    for (x, y), text in zip(positions, callouts):
-        ax_stats.text(x, y, text,
-                     ha='center', va='center', fontsize=11, fontweight='bold',
-                     bbox=box_props, family='monospace', color='#1a1a1a')
-
-    # ============ PANEL 5: ATTRIBUTION ============
-    ax_attr = fig.add_subplot(gs[4])
+    # ============ PANEL 4: ATTRIBUTION ============
+    ax_attr = fig.add_subplot(gs[3])
     ax_attr.axis('off')
 
     # Line 1: Data source
