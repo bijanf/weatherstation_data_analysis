@@ -1,21 +1,19 @@
-🔥 BERLIN'S VANISHING FROST — AUTUMN ANALYSIS 🔥
+🔥 BERLIN'S DISAPPEARING FROST — NOVEMBER ANALYSIS 🔥
 
-Meteorological autumn (Sep-Oct-Nov) over 13 decades:
+November frost days over 13 decades:
 
-🍂 1890s: 15.3 frost days per autumn
-🌡️ 2020s: 6.0 frost days per autumn
+❄️ 1890s: 12.0 frost days
+🌡️ 2020s: 6.0 frost days
 
-📉 -61% decline (-9.3 days)
-📈 Trend: -0.06 days/decade
+📉 -50% decline (-6.0 days)
+📈 Trend: -0.04 days/decade
 
-🔬 Statistically significant (p < 0.001)
+Pre-1950 avg: 11.3 days
+Post-2000 avg: 7.3 days
+Difference: -36%
 
-Pre-1950 avg: 14.2 days/autumn
-Post-2000 avg: 8.2 days/autumn
-Difference: -42%
+November is warming. This isn't cherry-picking—it's systematic change.
 
-Autumn is warming. This isn't cherry-picking—it's systematic change.
+Data: 132 years • Potsdam station
 
-Data: 132 autumn seasons • Potsdam station
-
-#ClimateChange #Berlin #Weather #DataViz #Science #AutumnWarming
+#ClimateChange #Berlin #Weather #DataViz #Science #ClimateEmergency

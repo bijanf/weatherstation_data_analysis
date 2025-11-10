@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Berlin's Disappearing Frost - METEOROLOGICAL AUTUMN ANALYSIS
-=============================================================
+Berlin's Disappearing Frost - NOVEMBER ANALYSIS
+================================================
 
-Shows systematic decline in meteorological autumn (Sep-Oct-Nov) frost days.
-Analyzes the standard 3-month autumn season used by meteorologists.
+Shows systematic decline in November frost days across 13 decades.
+November marks the transition to winter and first sustained frosts.
 More robust than single-year analysis, demonstrates clear climate trend.
 
 Optimized for social media sharing on Bluesky.
@@ -31,9 +31,9 @@ STATIONS_CONFIG = {
     "Schönefeld": {"lat": 52.3906, "lon": 13.5226}
 }
 
-ANALYSIS_MONTHS = [9, 10, 11]  # Sep, Oct, Nov (meteorological autumn)
+ANALYSIS_MONTHS = [11]  # November only
 HISTORICAL_START_YEAR = 1893
-HISTORICAL_END_YEAR = 2026  # Complete autumn seasons through 2024
+HISTORICAL_END_YEAR = 2026  # Complete November data through 2024
 
 
 # ==================== DATA FETCHING ====================
@@ -85,14 +85,14 @@ def fetch_station_data(station_name, lat, lon, year, months):
 
 def fetch_historical_frost_days(station_name, lat, lon, months, start_year=1893, end_year=2026):
     """
-    Fetch historical frost day counts for meteorological autumn (Sep-Oct-Nov).
+    Fetch historical frost day counts for November.
 
-    For each year, fetches Sep, Oct, Nov of that year.
+    For each year, fetches November of that year.
 
     Returns:
         Dictionary mapping year to frost day count
     """
-    print(f"\n📊 Fetching meteorological autumn data for {station_name}...")
+    print(f"\n📊 Fetching November data for {station_name}...")
 
     try:
         # Find station
@@ -111,7 +111,7 @@ def fetch_historical_frost_days(station_name, lat, lon, months, start_year=1893,
 
         for year in range(start_year, end_year):
             if year % 10 == 0:
-                print(f"  Processing {year} autumn...")
+                print(f"  Processing {year}...")
 
             all_month_data = []
             for month in months:
@@ -141,11 +141,11 @@ def fetch_historical_frost_days(station_name, lat, lon, months, start_year=1893,
                 frost_days = (combined_data['tmin'] < 0.0).sum()
                 total_days = len(combined_data['tmin'].dropna())
 
-                # Only include if we have at least 75 days of data (out of ~91 for 3 months)
-                if total_days >= 75:
+                # Only include if we have at least 25 days of data (out of 30 for November)
+                if total_days >= 25:
                     frost_days_by_year[year] = frost_days
 
-        print(f"✅ Retrieved {len(frost_days_by_year)} autumn seasons")
+        print(f"✅ Retrieved {len(frost_days_by_year)} November months")
         return frost_days_by_year
 
     except Exception as e:
@@ -292,11 +292,11 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
                  ha='center', va='center', fontsize=32, fontweight='black',
                  color='#1a1a1a')
 
-    ax_title.text(0.5, 0.35, "Meteorological Autumn (Sep-Oct-Nov) — 13 Decades of Dramatic Decline",
+    ax_title.text(0.5, 0.35, "November — 13 Decades Show Dramatic Warming",
                  ha='center', va='center', fontsize=15, fontweight='normal',
                  color='#4a4a4a', style='italic')
 
-    ax_title.text(0.5, 0.05, f"Systematic Analysis: 1890s-2020s • {sum([s['n_years'] for s in decadal_stats.values()])} autumn seasons",
+    ax_title.text(0.5, 0.05, f"Systematic Analysis: 1890s-2020s • {sum([s['n_years'] for s in decadal_stats.values()])} years of November data",
                  ha='center', va='center', fontsize=12, fontweight='normal',
                  color='#666666')
 
@@ -333,13 +333,13 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     trend_line = [trend_stats['intercept'] + trend_stats['slope'] * d for d in decades]
     ax_bars.plot(x, trend_line, 'k--', linewidth=3, alpha=0.7)
 
-    ax_bars.set_ylabel('Frost Days (Sep-Oct-Nov)', fontsize=13, fontweight='bold')
-    ax_bars.set_title(f'Autumn Averages by Decade: {trend_stats["absolute_change"]:.1f} Day Decline ({trend_stats["percent_change"]:+.0f}%)',
+    ax_bars.set_ylabel('Frost Days in November', fontsize=13, fontweight='bold')
+    ax_bars.set_title(f'November Averages by Decade: {trend_stats["absolute_change"]:.1f} Day Decline ({trend_stats["percent_change"]:+.0f}%)',
                      fontsize=15, fontweight='bold', pad=20)
     ax_bars.set_xticks(x)
     ax_bars.set_xticklabels([f"{d}s" for d in decades], rotation=45, ha='right', fontsize=10)
     ax_bars.grid(axis='y', alpha=0.3, linestyle='--')
-    ax_bars.set_ylim(-3, 30)  # Range for 3-month autumn season
+    ax_bars.set_ylim(-3, 20)  # Range for single month
 
     # ============ PANEL 3: INDIVIDUAL YEARS SCATTER ============
     ax_scatter = fig.add_subplot(gs[2])
@@ -347,16 +347,15 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     years = sorted(historical_data.keys())
     values = [historical_data[y] for y in years]
 
-    # Color by decade
+    # All individual years in grey
+    ax_scatter.scatter(years, values, c='grey', s=50, alpha=0.5, edgecolors='grey', linewidth=0.5)
+
+    # Color-code decadal means for trend visualization
     decade_colors = {}
     for d in decades:
         decade_colors[d] = plt.cm.RdYlBu_r((d - min(decades)) / (max(decades) - min(decades)))
 
-    point_colors = [decade_colors[(y // 10) * 10] for y in years]
-
-    ax_scatter.scatter(years, values, c=point_colors, s=50, alpha=0.6, edgecolors='black', linewidth=0.5)
-
-    # Add decadal means as larger points
+    # Add decadal means as larger colored points
     for decade in decades:
         decade_years = [y for y in years if (y // 10) * 10 == decade]
         if decade_years:
@@ -370,8 +369,8 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     ax_scatter.plot(years, trend_line_full, 'k--', linewidth=2.5, alpha=0.7)
 
     ax_scatter.set_xlabel('Year', fontsize=13, fontweight='bold')
-    ax_scatter.set_ylabel('Frost Days (Sep-Oct-Nov)', fontsize=13, fontweight='bold')
-    ax_scatter.set_title('Individual Autumns (circles) & Decadal Means (diamonds)',
+    ax_scatter.set_ylabel('Frost Days in November', fontsize=13, fontweight='bold')
+    ax_scatter.set_title('Individual Years (circles) & Decadal Means (diamonds)',
                         fontsize=14, fontweight='bold', pad=15)
     ax_scatter.grid(True, alpha=0.3, linewidth=0.5)
     ax_scatter.set_xlim(1890, 2027)
@@ -402,14 +401,14 @@ def generate_decadal_caption(decadal_stats, trend_stats, era_comparison):
     """
     Generate a punchy caption for Bluesky post emphasizing systematic change.
     """
-    caption = "🔥 BERLIN'S VANISHING FROST — AUTUMN ANALYSIS 🔥\n\n"
+    caption = "🔥 BERLIN'S DISAPPEARING FROST — NOVEMBER ANALYSIS 🔥\n\n"
 
-    caption += f"Meteorological autumn (Sep-Oct-Nov) over 13 decades:\n\n"
+    caption += f"November frost days over 13 decades:\n\n"
 
     first_decade = trend_stats['first_decade']
     last_decade = trend_stats['last_decade']
-    caption += f"🍂 {first_decade}s: {trend_stats['first_mean']:.1f} frost days per autumn\n"
-    caption += f"🌡️ {last_decade}s: {trend_stats['last_mean']:.1f} frost days per autumn\n\n"
+    caption += f"❄️ {first_decade}s: {trend_stats['first_mean']:.1f} frost days\n"
+    caption += f"🌡️ {last_decade}s: {trend_stats['last_mean']:.1f} frost days\n\n"
 
     caption += f"📉 {trend_stats['percent_change']:+.0f}% decline ({trend_stats['absolute_change']:.1f} days)\n"
     caption += f"📈 Trend: {trend_stats['slope']:.2f} days/decade\n\n"
@@ -417,13 +416,13 @@ def generate_decadal_caption(decadal_stats, trend_stats, era_comparison):
     if trend_stats['p_value'] < 0.001:
         caption += "🔬 Statistically significant (p < 0.001)\n\n"
 
-    caption += f"Pre-1950 avg: {era_comparison['early_mean']:.1f} days/autumn\n"
-    caption += f"Post-2000 avg: {era_comparison['recent_mean']:.1f} days/autumn\n"
+    caption += f"Pre-1950 avg: {era_comparison['early_mean']:.1f} days\n"
+    caption += f"Post-2000 avg: {era_comparison['recent_mean']:.1f} days\n"
     caption += f"Difference: {era_comparison['percent_change']:+.0f}%\n\n"
 
-    caption += "Autumn is warming. This isn't cherry-picking—it's systematic change.\n\n"
-    caption += f"Data: {sum([s['n_years'] for s in decadal_stats.values()])} autumn seasons • Potsdam station\n\n"
-    caption += "#ClimateChange #Berlin #Weather #DataViz #Science #AutumnWarming"
+    caption += "November is warming. This isn't cherry-picking—it's systematic change.\n\n"
+    caption += f"Data: {sum([s['n_years'] for s in decadal_stats.values()])} years • Potsdam station\n\n"
+    caption += "#ClimateChange #Berlin #Weather #DataViz #Science #ClimateEmergency"
 
     return caption
 
