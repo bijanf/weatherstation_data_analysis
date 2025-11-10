@@ -308,11 +308,9 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     stds = [decadal_stats[d]['std'] for d in decades]
     n_years = [decadal_stats[d]['n_years'] for d in decades]
 
-    # Color gradient from blue (cold/many frost days) to red (warm/few frost days)
-    colors = plt.cm.RdYlBu_r(np.linspace(0.2, 0.9, len(decades)))
-
+    # Uniform grey bars for clean, simple look
     x = np.arange(len(decades))
-    bars = ax_bars.bar(x, means, color=colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    bars = ax_bars.bar(x, means, color='lightgrey', alpha=0.85, edgecolor='black', linewidth=1.5)
 
     # Add error bars (standard deviation)
     ax_bars.errorbar(x, means, yerr=stds, fmt='none', ecolor='black',
@@ -350,18 +348,13 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     # All individual years in grey
     ax_scatter.scatter(years, values, c='grey', s=50, alpha=0.5, edgecolors='grey', linewidth=0.5)
 
-    # Color-code decadal means for trend visualization
-    decade_colors = {}
-    for d in decades:
-        decade_colors[d] = plt.cm.RdYlBu_r((d - min(decades)) / (max(decades) - min(decades)))
-
-    # Add decadal means as larger colored points
+    # Add decadal means as larger grey diamonds
     for decade in decades:
         decade_years = [y for y in years if (y // 10) * 10 == decade]
         if decade_years:
             mid_year = np.mean(decade_years)
             ax_scatter.scatter([mid_year], [decadal_stats[decade]['mean']],
-                             color=decade_colors[decade], s=300, marker='D',
+                             color='darkgrey', s=300, marker='D',
                              edgecolors='black', linewidth=2, zorder=5)
 
     # Add trend line
