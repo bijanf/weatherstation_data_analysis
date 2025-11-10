@@ -308,9 +308,15 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     stds = [decadal_stats[d]['std'] for d in decades]
     n_years = [decadal_stats[d]['n_years'] for d in decades]
 
-    # Uniform grey bars for clean, simple look
+    # Color-code bars by frost day value (blue = many/cold, red = few/warm)
+    # Normalize values to 0-1 range for colormap
+    vmin, vmax = min(means), max(means)
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    cmap = plt.cm.RdYlBu  # Red (warm/few) to Blue (cold/many)
+
     x = np.arange(len(decades))
-    bars = ax_bars.bar(x, means, color='lightgrey', alpha=0.85, edgecolor='black', linewidth=1.5)
+    colors = [cmap(norm(val)) for val in means]
+    bars = ax_bars.bar(x, means, color=colors, alpha=0.85, edgecolor='black', linewidth=1.5)
 
     # Add error bars (standard deviation)
     ax_bars.errorbar(x, means, yerr=stds, fmt='none', ecolor='black',
@@ -348,13 +354,21 @@ def create_decadal_infographic(decadal_stats, trend_stats, era_comparison,
     # All individual years in grey
     ax_scatter.scatter(years, values, c='grey', s=50, alpha=0.5, edgecolors='grey', linewidth=0.5)
 
-    # Add decadal means as larger grey diamonds
+    # Color-code decadal diamonds by frost day value
+    # Use same colormap as bar chart
+    all_decade_means = [decadal_stats[d]['mean'] for d in decades]
+    vmin_scatter, vmax_scatter = min(all_decade_means), max(all_decade_means)
+    norm_scatter = plt.Normalize(vmin=vmin_scatter, vmax=vmax_scatter)
+    cmap_scatter = plt.cm.RdYlBu  # Red (warm/few) to Blue (cold/many)
+
     for decade in decades:
         decade_years = [y for y in years if (y // 10) * 10 == decade]
         if decade_years:
             mid_year = np.mean(decade_years)
-            ax_scatter.scatter([mid_year], [decadal_stats[decade]['mean']],
-                             color='darkgrey', s=300, marker='D',
+            decade_mean = decadal_stats[decade]['mean']
+            color = cmap_scatter(norm_scatter(decade_mean))
+            ax_scatter.scatter([mid_year], [decade_mean],
+                             color=color, s=300, marker='D',
                              edgecolors='black', linewidth=2, zorder=5)
 
     # Add trend line
