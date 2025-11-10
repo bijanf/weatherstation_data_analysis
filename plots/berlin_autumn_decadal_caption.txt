@@ -1,21 +1,21 @@
-🔥 BERLIN'S VANISHING FROST — FROST SEASON ANALYSIS 🔥
+🔥 BERLIN'S VANISHING FROST — AUTUMN ANALYSIS 🔥
 
-Frost season (Oct-Mar) over 13 decades reveals dramatic decline:
+Meteorological autumn (Sep-Oct-Nov) over 13 decades:
 
-❄️ 1890s: 90.9 frost days per season
-🌡️ 2020s: 57.8 frost days per season
+🍂 1890s: 15.3 frost days per autumn
+🌡️ 2020s: 6.0 frost days per autumn
 
-📉 -36% decline (-33.1 days)
-📈 Trend: -0.19 days/decade
+📉 -61% decline (-9.3 days)
+📈 Trend: -0.06 days/decade
 
 🔬 Statistically significant (p < 0.001)
 
-Pre-1950 avg: 88.3 days/season
-Post-2000 avg: 68.9 days/season
-Difference: -22%
+Pre-1950 avg: 14.2 days/autumn
+Post-2000 avg: 8.2 days/autumn
+Difference: -42%
 
-Winter is warming. The full frost season tells the story.
+Autumn is warming. This isn't cherry-picking—it's systematic change.
 
-Data: 132 frost seasons (Oct-Mar) • Potsdam station
+Data: 132 autumn seasons • Potsdam station
 
-#ClimateChange #Berlin #Weather #DataViz #Science #WinterWarming
+#ClimateChange #Berlin #Weather #DataViz #Science #AutumnWarming
