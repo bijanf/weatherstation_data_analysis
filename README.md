@@ -14,14 +14,16 @@
 
 ## 🌟 Overview
 
-A comprehensive Python package for analyzing weather station data with a focus on **extreme value statistics** and **long-term climate trends**. This project provides professional-grade tools for climate data analysis, featuring 133 years of real meteorological data from the Potsdam Säkularstation, Germany.
+A comprehensive Python package for analyzing weather station data with a focus on **extreme value statistics**, **long-term climate trends**, and **drought analysis**. This project provides professional-grade tools for climate data analysis, featuring 133 years of real meteorological data from the Potsdam Säkularstation, Germany, and comprehensive drought analysis tools for Iranian weather stations.
 
 ### 🎯 Key Features
 
 - **📊 Extreme Value Analysis**: Annual maxima, return periods, threshold exceedances
 - **🌡️ Temperature Extremes**: Comprehensive temperature trend analysis
 - **🌧️ Precipitation Analysis**: Cumulative precipitation and drought analysis
-- **📈 Statistical Modeling**: Gumbel distribution fitting, trend analysis
+- **🇮🇷 Iran Drought Analysis**: Specialized tools for analyzing Iran's severe 2018-2025 drought
+- **📉 Drought Indices**: Standardized Precipitation Index (SPI), precipitation deficits, anomalies
+- **📈 Statistical Modeling**: Gumbel distribution fitting, trend analysis, multi-station comparisons
 - **🎨 Publication-Quality Plots**: Professional visualizations ready for scientific publication
 - **🔬 Reproducible Science**: Fully documented, tested, and version-controlled analysis
 - **⚡ Modular Architecture**: Clean, maintainable code with proper separation of concerns
@@ -203,6 +205,119 @@ class WeatherPlotter:
     def plot_threshold_exceedance_analysis(all_data, save_path) -> plt.Figure
     def plot_statistics_summary(extremes_df, save_path) -> plt.Figure
 ```
+
+## 🇮🇷 Iran Drought Analysis (2018-2025)
+
+### Overview
+
+This package includes comprehensive tools for analyzing **Iran's severe drought conditions** over the past 6-7 years. The drought, described as one of the worst in 50+ years, has resulted in:
+- **89% decrease** in fall 2025 rainfall (driest autumn in 50 years)
+- **45% below normal** annual precipitation (2024-25)
+- **19 provinces** experiencing significant drought
+
+### Quick Start
+
+```bash
+# Run comprehensive Iran drought analysis
+python iran_drought_analysis.py
+```
+
+This will:
+1. Fetch precipitation data from 10 major Iranian weather stations (NOAA GHCN-Daily)
+2. Calculate precipitation deficits vs. baseline (1981-2010)
+3. Compute Standardized Precipitation Index (SPI)
+4. Generate publication-quality visualizations
+5. Export statistical summaries for scientific papers
+
+### Station Coverage
+
+10 major Iranian cities analyzed:
+- **Tehran** (Capital, Central Iran)
+- **Mashhad** (Northeast)
+- **Isfahan** (Central)
+- **Tabriz** (Northwest)
+- **Shiraz** (South-Central)
+- **Ahvaz** (Southwest)
+- **Kerman** (Southeast)
+- **Rasht** (Caspian Sea)
+- **Zahedan** (Southeast)
+- **Bandar Abbas** (Persian Gulf)
+
+### Example Usage
+
+```python
+from weatherstation_analysis.iran_data_fetcher import IranianDataFetcher
+from weatherstation_analysis.drought_analyzer import DroughtAnalyzer
+from weatherstation_analysis.drought_plotter import DroughtPlotter
+
+# Fetch precipitation data
+fetcher = IranianDataFetcher("Tehran")
+prcp_data = fetcher.fetch_precipitation_data(start_year=1950, end_year=2025)
+
+# Analyze drought conditions
+analyzer = DroughtAnalyzer(
+    precipitation_data=prcp_data,
+    station_name="Tehran",
+    baseline_start=1981,
+    baseline_end=2010
+)
+
+# Perform comprehensive analysis
+results = analyzer.analyze_drought_period(start_year=2018, end_year=2025)
+
+# Calculate Standardized Precipitation Index
+spi_data = analyzer.calculate_spi(scale_months=12)
+
+# Generate visualizations
+plotter = DroughtPlotter()
+plotter.plot_comprehensive_drought_dashboard(
+    drought_results=results,
+    station_name="Tehran",
+    output_file="results/tehran_drought_dashboard.png"
+)
+```
+
+### Key Metrics Calculated
+
+- **Precipitation Deficit**: Absolute (mm) and percentage deficit vs. baseline
+- **Standardized Precipitation Index (SPI-12)**: International drought severity index
+- **Cumulative Deficit**: Total water shortfall over drought period
+- **Percent of Normal**: Annual precipitation as % of 1981-2010 baseline
+- **Regional Comparison**: Multi-station drought severity patterns
+
+### Output Files
+
+```
+results/iran_drought_analysis/
+├── plots/
+│   ├── tehran_drought_dashboard.png          # Comprehensive 4-panel view
+│   ├── tehran_deficit_timeseries.png         # Annual deficit trends
+│   ├── tehran_spi_timeseries.png             # SPI drought index
+│   └── regional_drought_comparison.png       # Multi-station comparison
+└── data/
+    ├── tehran_annual_deficit.csv             # Annual statistics
+    ├── tehran_spi12.csv                      # SPI time series
+    └── regional_drought_summary.csv          # Regional summary
+```
+
+### Scientific Paper Support
+
+The analysis generates all data and visualizations needed for scientific publication:
+- **Quantitative metrics** for drought severity assessment
+- **Statistical summaries** comparing to baseline period
+- **Publication-quality plots** ready for journal submission
+- **Scientific paper template** with complete structure and guidance
+
+See detailed documentation:
+- **[IRAN_DROUGHT_README.md](IRAN_DROUGHT_README.md)** - Comprehensive analysis guide
+- **[scientific_paper_template.md](scientific_paper_template.md)** - Paper writing template
+
+### Data Source
+
+**NOAA GHCN-Daily** (Global Historical Climatology Network):
+- URL: https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/
+- Coverage: 1950-2025
+- Quality: International standard, quality-controlled dataset
 
 ## 🧪 Testing
 

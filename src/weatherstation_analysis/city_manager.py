@@ -15,7 +15,24 @@ class CityManager:
     """Manages city-based weather station lookup and fuzzy matching."""
 
     def __init__(self):
-        """Initialize the city manager with German city database."""
+        """Initialize the city manager with German and Iranian city databases."""
+        # Major Iranian cities with approximate coordinates
+        self.iranian_cities = {
+            "tehran": {"lat": 35.689, "lon": 51.313, "name": "Tehran"},
+            "mashhad": {"lat": 36.267, "lon": 59.633, "name": "Mashhad"},
+            "isfahan": {"lat": 32.750, "lon": 51.667, "name": "Isfahan"},
+            "esfahan": {"lat": 32.750, "lon": 51.667, "name": "Isfahan"},
+            "tabriz": {"lat": 38.133, "lon": 46.300, "name": "Tabriz"},
+            "shiraz": {"lat": 29.533, "lon": 52.600, "name": "Shiraz"},
+            "ahvaz": {"lat": 31.333, "lon": 48.667, "name": "Ahvaz"},
+            "ahwaz": {"lat": 31.333, "lon": 48.667, "name": "Ahvaz"},
+            "kerman": {"lat": 30.250, "lon": 56.967, "name": "Kerman"},
+            "rasht": {"lat": 37.317, "lon": 49.617, "name": "Rasht"},
+            "zahedan": {"lat": 29.467, "lon": 60.883, "name": "Zahedan"},
+            "bandarabbas": {"lat": 27.217, "lon": 56.367, "name": "Bandar Abbas"},
+            "bandar abbas": {"lat": 27.217, "lon": 56.367, "name": "Bandar Abbas"},
+        }
+
         # Major German cities with approximate coordinates
         self.german_cities = {
             "berlin": {"lat": 52.5200, "lon": 13.4050, "name": "Berlin"},
@@ -48,28 +65,39 @@ class CityManager:
             "magdeburg": {"lat": 52.1205, "lon": 11.6276, "name": "Magdeburg"},
         }
 
-    def find_city_match(self, city_input: str) -> Optional[Dict]:
+    def find_city_match(self, city_input: str, country: str = "auto") -> Optional[Dict]:
         """
         Find the best matching city using fuzzy matching.
 
         Args:
             city_input: User input city name
+            country: Country to search in ("germany", "iran", or "auto" for both)
 
         Returns:
             Dictionary with city info or None if no good match
         """
         city_lower = city_input.lower().strip()
 
+        # Determine which city databases to search
+        databases = []
+        if country == "auto":
+            databases = [self.iranian_cities, self.german_cities]
+        elif country == "iran":
+            databases = [self.iranian_cities]
+        elif country == "germany":
+            databases = [self.german_cities]
+
         # Exact match first
-        if city_lower in self.german_cities:
-            return self.german_cities[city_lower]
+        for db in databases:
+            if city_lower in db:
+                return db[city_lower]
 
         # Fuzzy matching
-        city_names = list(self.german_cities.keys())
-        matches = difflib.get_close_matches(city_lower, city_names, n=1, cutoff=0.6)
-
-        if matches:
-            return self.german_cities[matches[0]]
+        for db in databases:
+            city_names = list(db.keys())
+            matches = difflib.get_close_matches(city_lower, city_names, n=1, cutoff=0.6)
+            if matches:
+                return db[matches[0]]
 
         return None
 
@@ -144,9 +172,32 @@ class CityManager:
         """Get city information including coordinates."""
         return self.find_city_match(city_name)
 
-    def list_available_cities(self) -> List[str]:
-        """List all available German cities."""
+    def list_available_cities(self, country: str = "all") -> List[str]:
+        """
+        List all available cities.
+
+        Args:
+            country: Country filter ("all", "germany", "iran")
+
+        Returns:
+            Sorted list of available city names
+        """
         unique_cities = set()
-        for city_data in self.german_cities.values():
-            unique_cities.add(city_data["name"])
+
+        if country in ["all", "iran"]:
+            for city_data in self.iranian_cities.values():
+                unique_cities.add(city_data["name"])
+
+        if country in ["all", "germany"]:
+            for city_data in self.german_cities.values():
+                unique_cities.add(city_data["name"])
+
         return sorted(list(unique_cities))
+
+    def list_iranian_cities(self) -> List[str]:
+        """List all available Iranian cities."""
+        return self.list_available_cities(country="iran")
+
+    def list_german_cities(self) -> List[str]:
+        """List all available German cities."""
+        return self.list_available_cities(country="germany")
