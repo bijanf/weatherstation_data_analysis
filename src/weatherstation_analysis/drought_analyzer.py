@@ -193,26 +193,41 @@ class DroughtAnalyzer:
             (rolling_prcp.index.year <= self.baseline_end)
         ].dropna()
 
-        if distribution == 'gamma':
-            # Fit gamma distribution
-            shape, loc, scale = stats.gamma.fit(baseline_monthly, floc=0)
+        spi_values = None
+        use_gamma = distribution == 'gamma'
 
-            # Calculate SPI using gamma distribution
-            spi_values = []
-            for value in rolling_prcp:
-                if pd.isna(value):
-                    spi_values.append(np.nan)
-                else:
-                    # Calculate cumulative probability
-                    cdf = stats.gamma.cdf(value, shape, loc, scale)
-                    # Transform to standard normal
-                    spi = stats.norm.ppf(cdf)
-                    spi_values.append(spi)
+        if use_gamma:
+            # Fit gamma distribution - filter out zeros for fitting
+            baseline_nonzero = baseline_monthly[baseline_monthly > 0]
 
-        else:  # normal distribution
+            if len(baseline_nonzero) >= 10:
+                try:
+                    shape, loc, scale = stats.gamma.fit(baseline_nonzero, floc=0)
+
+                    # Calculate SPI using gamma distribution
+                    spi_values = []
+                    for value in rolling_prcp:
+                        if pd.isna(value) or value <= 0:
+                            spi_values.append(np.nan)
+                        else:
+                            # Calculate cumulative probability
+                            cdf = stats.gamma.cdf(value, shape, loc, scale)
+                            # Clip to avoid inf values at extremes
+                            cdf = np.clip(cdf, 0.001, 0.999)
+                            # Transform to standard normal
+                            spi = stats.norm.ppf(cdf)
+                            spi_values.append(spi)
+                except Exception:
+                    spi_values = None
+
+        # Fall back to normal distribution
+        if spi_values is None:
             mean = baseline_monthly.mean()
             std = baseline_monthly.std()
-            spi_values = (rolling_prcp - mean) / std
+            if std > 0:
+                spi_values = (rolling_prcp - mean) / std
+            else:
+                spi_values = rolling_prcp * 0  # All zeros if no variance
 
         spi_df = pd.DataFrame({
             'precipitation': rolling_prcp,
