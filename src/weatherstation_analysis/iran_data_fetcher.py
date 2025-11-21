@@ -25,76 +25,91 @@ class IranianStationRegistry:
     """
 
     # Major Iranian cities with weather stations
+    # VERIFIED GHCN Station IDs (checked against https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt)
     STATIONS = {
-        "Tehran (Mehrabad)": {
-            "lat": 35.689,
-            "lon": 51.313,
-            "ghcn_pattern": "IR000040754",  # Mehrabad International Airport
+        "Tehran": {
+            "lat": 35.683,
+            "lon": 51.317,
+            "ghcn_pattern": "IR000407540",  # TEHRAN MEHRABAD - VERIFIED
             "elevation": 1191,
             "name_variants": ["Tehran", "Tehrān", "Mehrabad"]
         },
         "Mashhad": {
             "lat": 36.267,
             "lon": 59.633,
-            "ghcn_pattern": "IR000040745",
+            "ghcn_pattern": "IR000040745",  # MASHHAD - VERIFIED (GSN)
             "elevation": 999,
             "name_variants": ["Mashhad", "Mashad"]
         },
         "Isfahan": {
-            "lat": 32.750,
-            "lon": 51.667,
-            "ghcn_pattern": "IR000040800",
-            "elevation": 1550,
+            "lat": 32.751,
+            "lon": 51.862,
+            "ghcn_pattern": "IRM00040800",  # ESFAHAN SHAHID BEHESHTI INTL - VERIFIED
+            "elevation": 1546,
             "name_variants": ["Isfahan", "Esfahan"]
         },
         "Tabriz": {
-            "lat": 38.133,
-            "lon": 46.300,
-            "ghcn_pattern": "IR000040708",
+            "lat": 38.080,
+            "lon": 46.280,
+            "ghcn_pattern": "IR000040706",  # TABRIZ - VERIFIED (GSN)
             "elevation": 1361,
             "name_variants": ["Tabriz"]
         },
         "Shiraz": {
             "lat": 29.533,
-            "lon": 52.600,
-            "ghcn_pattern": "IR000040848",
-            "elevation": 1484,
+            "lon": 52.533,
+            "ghcn_pattern": "IR000040848",  # SHIRAZ - VERIFIED (GSN)
+            "elevation": 1481,
             "name_variants": ["Shiraz", "Shīrāz"]
         },
         "Ahvaz": {
-            "lat": 31.333,
-            "lon": 48.667,
-            "ghcn_pattern": "IR000040831",
-            "elevation": 23,
+            "lat": 31.337,
+            "lon": 48.762,
+            "ghcn_pattern": "IRM00040811",  # AHWAZ - VERIFIED
+            "elevation": 20,
             "name_variants": ["Ahvaz", "Ahwaz", "Ahwāz"]
         },
         "Kerman": {
             "lat": 30.250,
             "lon": 56.967,
-            "ghcn_pattern": "IR000040856",
+            "ghcn_pattern": "IR000040841",  # KERMAN - VERIFIED (GSN)
             "elevation": 1754,
             "name_variants": ["Kerman", "Kermān"]
         },
-        "Rasht": {
-            "lat": 37.317,
-            "lon": 49.617,
-            "ghcn_pattern": "IR000040719",
-            "elevation": -7,
-            "name_variants": ["Rasht"]
-        },
         "Zahedan": {
-            "lat": 29.467,
-            "lon": 60.883,
-            "ghcn_pattern": "IR000040869",
-            "elevation": 1370,
+            "lat": 29.476,
+            "lon": 60.907,
+            "ghcn_pattern": "IR000408560",  # ZAHEDAN - VERIFIED (GSN)
+            "elevation": 1378,
             "name_variants": ["Zahedan", "Zāhedān"]
         },
         "Bandar Abbas": {
-            "lat": 27.217,
-            "lon": 56.367,
-            "ghcn_pattern": "IR000040885",
-            "elevation": 10,
+            "lat": 27.218,
+            "lon": 56.378,
+            "ghcn_pattern": "IRM00040875",  # BANDAR ABBASS INTL - VERIFIED
+            "elevation": 7,
             "name_variants": ["Bandar Abbas", "Bandar-Abbas"]
+        },
+        "Kermanshah": {
+            "lat": 34.267,
+            "lon": 47.117,
+            "ghcn_pattern": "IR000407660",  # KERMANSHAH - VERIFIED (GSN)
+            "elevation": 1322,
+            "name_variants": ["Kermanshah"]
+        },
+        "Yazd": {
+            "lat": 31.905,
+            "lon": 54.277,
+            "ghcn_pattern": "IRM00040821",  # YAZD - VERIFIED
+            "elevation": 1236,
+            "name_variants": ["Yazd"]
+        },
+        "Bushehr": {
+            "lat": 28.945,
+            "lon": 50.835,
+            "ghcn_pattern": "IRM00040858",  # BUSHEHR - VERIFIED
+            "elevation": 21,
+            "name_variants": ["Bushehr", "Bushire"]
         }
     }
 
