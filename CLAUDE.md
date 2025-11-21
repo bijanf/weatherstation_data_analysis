@@ -80,3 +80,44 @@ python iran_megadrought_analysis.py   # COMPREHENSIVE Iran analysis (1950-2025, 
 - **Primary**: Meteostat API (meteostat.net) - backed by DWD
 - **Iran**: NOAA GHCN-Daily (10 major cities: Tehran, Mashhad, Isfahan, Tabriz, Shiraz, Ahvaz, Kerman, Rasht, Zahedan, Bandar Abbas)
 - Quality filtering: only years with ≥80% data availability
+
+## Proposed Enhancements for Publication-Quality Analysis
+
+To elevate the `iran_megadrought_analysis.py` script to the standard of a top-tier scientific publication, the following enhancements should be implemented. The goal is to move beyond *describing* the drought to *attributing* its causes and impacts, specifically disentangling the roles of global warming, natural variability, and human water demand.
+
+### 1. Make the Analysis "Bulletproof" (Methodological Rigor)
+
+- **Data Homogenization**: Before analysis, apply a data homogenization process to all station records (e.g., using `pyhomog`) to correct for non-climatic shifts (e.g., station moves, instrument changes). This ensures that detected trends are purely climatic.
+- **Integrate Satellite Precipitation Data**: Integrate a gridded satellite dataset like **CHIRPS** into the analysis. This will validate the ground station data and provide a more complete spatial picture of precipitation, especially in the vital mountainous headwaters where stations are sparse. This is a critical step.
+- **Use Multiple Drought Indices**: The analysis currently relies on the Standardized Precipitation Index (SPI). It should be expanded to include the **Standardized Precipitation-Evapotranspiration Index (SPEI)**. SPEI incorporates temperature's effect on water demand, making it a more robust indicator of drought under a warming climate.
+- **Quantify Uncertainty**: All statistical analyses must include uncertainty quantification.
+    - For the return period analysis, calculate and plot **confidence intervals**.
+    - For all trend analyses, report **p-values** to demonstrate statistical significance.
+
+### 2. Attribute Precipitation Changes (Climate Signal vs. Natural Cycles)
+
+- **Enhance Periodicity Analysis**: The existing `WaveletDroughtAnalyzer` should be enhanced to not just find cycles, but to statistically link them to major climate oscillations (e.g., ENSO, NAO).
+- **Method**:
+    1. Obtain time series data for relevant climate indices (e.g., Southern Oscillation Index).
+    2. Use wavelet analysis to show shared periodicity between the precipitation data and these indices.
+    3. Use a statistical model (e.g., multiple linear regression) to model precipitation based on these natural cycles.
+    4. Analyze the *residual* of this model. This residual represents the precipitation variability *not* explained by natural cycles, and can be analyzed for a long-term trend more attributable to anthropogenic climate change.
+
+### 3. Disentangle Climate Change from Population and Mismanagement
+
+This is the most novel part of the proposed research. The goal is to separate the climatic drivers (less rain, more heat) from the societal drivers (water demand, policy).
+
+- **Action**: Use a hydrological model to simulate a key river basin (e.g., the Zayandeh-Rud or Karun basins, fed by the Zagros mountains).
+- **Method**:
+    1.  **Input Climate Data**: Use the historical precipitation and temperature data (from GHCN-D and CHIRPS) to "force" a hydrological model (e.g., a simple conceptual model like HBV).
+    2.  **Input Demand Data**: Use historical population data or agricultural land use statistics as a proxy for water demand.
+    3.  **Run Two Scenarios**:
+        *   **Scenario A (Climate Impact Only)**: Run the model with changing climate data but keep water demand constant at a baseline level (e.g., 1980s levels).
+        *   **Scenario B (Combined Impact)**: Run the model with both changing climate data and changing water demand.
+- **Outcome**: By comparing the simulated river flow and water storage between Scenario A and Scenario B, you can **quantitatively separate the impact of climate change (drought) from the impact of increased population and mismanagement (demand)**. This will provide a powerful and unique finding.
+
+### 4. Strengthen the Global Warming Connection
+
+- **Action**: Perform a robust trend analysis on the temperature data from all stations (1950-2025).
+- **Method**: Calculate the rate of warming (e.g., °C per decade) and its statistical significance for each station and regionally.
+- **Outcome**: This will provide direct, quantitative evidence of the local impact of global warming in Iran. This warming trend can then be directly linked to the increased drought severity through the SPEI analysis and the `CompoundEventAnalyzer`, creating a clear and compelling narrative for the paper.
