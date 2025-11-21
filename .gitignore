@@ -184,3 +184,5 @@ safety-report.json
 # *.jpg
 # *.svg
 # *.pdf
+# CDS API credentials (ERA5)
+.cdsapirc
