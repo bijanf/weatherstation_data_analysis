@@ -15,14 +15,16 @@ Requires CDS API key in ~/.cdsapirc
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-try:
+if TYPE_CHECKING:
     import xarray as xr
 
+try:
+    import xarray
     HAS_XARRAY = True
 except ImportError:
     HAS_XARRAY = False
@@ -89,7 +91,7 @@ class ERA5Fetcher:
 
     def fetch_monthly_data(
         self, variables: List[str], start_year: int = 1981, end_year: int = 2025
-    ) -> Optional[xr.Dataset]:
+    ) -> Optional["xr.Dataset"]:
         """
         Fetch monthly ERA5 data for Iran.
 
@@ -165,7 +167,7 @@ class ERA5Fetcher:
 
     def fetch_snow_data(
         self, start_year: int = 1981, end_year: int = 2025
-    ) -> Optional[xr.Dataset]:
+    ) -> Optional["xr.Dataset"]:
         """
         Fetch Snow Water Equivalent data for Iran.
 
@@ -176,7 +178,7 @@ class ERA5Fetcher:
 
     def fetch_temperature_data(
         self, start_year: int = 1981, end_year: int = 2025
-    ) -> Optional[xr.Dataset]:
+    ) -> Optional["xr.Dataset"]:
         """
         Fetch 2m temperature data for Iran.
 
@@ -187,7 +189,7 @@ class ERA5Fetcher:
 
     def calculate_alborz_snowpack(
         self,
-        ds: Optional[xr.Dataset] = None,
+        ds: Optional["xr.Dataset"] = None,
         start_year: int = 1981,
         end_year: int = 2025,
     ) -> pd.DataFrame:
@@ -267,7 +269,7 @@ class ERA5Fetcher:
 
     def calculate_temperature_trend(
         self,
-        ds: Optional[xr.Dataset] = None,
+        ds: Optional["xr.Dataset"] = None,
         start_year: int = 1981,
         end_year: int = 2025,
     ) -> Dict:
