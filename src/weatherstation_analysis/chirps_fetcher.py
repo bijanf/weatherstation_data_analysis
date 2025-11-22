@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 try:
     import xarray
+
     HAS_XARRAY = True
 except ImportError:
     HAS_XARRAY = False
