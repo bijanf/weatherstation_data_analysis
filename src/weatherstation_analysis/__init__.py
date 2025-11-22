@@ -12,7 +12,11 @@ from .visualization import WeatherPlotter
 from .city_manager import CityManager
 
 # Iran drought analysis modules
-from .iran_data_fetcher import IranianDataFetcher, IranianStationRegistry, MultiStationFetcher
+from .iran_data_fetcher import (
+    IranianDataFetcher,
+    IranianStationRegistry,
+    MultiStationFetcher,
+)
 from .drought_analyzer import DroughtAnalyzer, MultiStationDroughtAnalyzer
 from .drought_plotter import DroughtPlotter
 
@@ -26,6 +30,10 @@ from .advanced_drought_analyzer import (
     MegadroughtAnalyzer,
 )
 from .advanced_drought_plotter import AdvancedDroughtPlotter
+
+# Multi-source data fetchers
+from .chirps_fetcher import CHIRPSFetcher
+from .era5_fetcher import ERA5Fetcher
 
 __all__ = [
     # Core modules
@@ -49,4 +57,7 @@ __all__ = [
     "WaveletDroughtAnalyzer",
     "MegadroughtAnalyzer",
     "AdvancedDroughtPlotter",
+    # Multi-source data fetchers
+    "CHIRPSFetcher",
+    "ERA5Fetcher",
 ]

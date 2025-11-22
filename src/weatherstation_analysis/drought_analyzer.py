@@ -34,7 +34,7 @@ class DroughtAnalyzer:
         precipitation_data: pd.DataFrame,
         station_name: str = "Unknown Station",
         baseline_start: int = 1981,
-        baseline_end: int = 2010
+        baseline_end: int = 2010,
     ):
         """
         Initialize the drought analyzer.
@@ -56,13 +56,19 @@ class DroughtAnalyzer:
             raise ValueError("Precipitation data index must be DatetimeIndex")
 
         # Determine precipitation column name
-        prcp_cols = [c for c in self.precipitation_data.columns if 'prcp' in c.lower() or 'precipitation' in c.lower()]
+        prcp_cols = [
+            c
+            for c in self.precipitation_data.columns
+            if "prcp" in c.lower() or "precipitation" in c.lower()
+        ]
         if not prcp_cols:
             raise ValueError("No precipitation column found in data")
         self.prcp_col = prcp_cols[0]
 
         print(f"📊 Initializing DroughtAnalyzer for {station_name}")
-        print(f"   Data period: {self.precipitation_data.index.min().year} - {self.precipitation_data.index.max().year}")
+        print(
+            f"   Data period: {self.precipitation_data.index.min().year} - {self.precipitation_data.index.max().year}"
+        )
         print(f"   Baseline period: {baseline_start} - {baseline_end}")
 
     def calculate_annual_totals(self) -> pd.DataFrame:
@@ -72,8 +78,8 @@ class DroughtAnalyzer:
         Returns:
             DataFrame with annual precipitation totals
         """
-        annual_totals = self.precipitation_data.resample('YE').sum()
-        annual_totals['year'] = annual_totals.index.year
+        annual_totals = self.precipitation_data.resample("YE").sum()
+        annual_totals["year"] = annual_totals.index.year
 
         return annual_totals
 
@@ -86,38 +92,40 @@ class DroughtAnalyzer:
         """
         # Filter to baseline period
         baseline_data = self.precipitation_data[
-            (self.precipitation_data.index.year >= self.baseline_start) &
-            (self.precipitation_data.index.year <= self.baseline_end)
+            (self.precipitation_data.index.year >= self.baseline_start)
+            & (self.precipitation_data.index.year <= self.baseline_end)
         ]
 
         if baseline_data.empty:
-            raise ValueError(f"No data available for baseline period {self.baseline_start}-{self.baseline_end}")
+            raise ValueError(
+                f"No data available for baseline period {self.baseline_start}-{self.baseline_end}"
+            )
 
         # Calculate annual totals for baseline period
-        baseline_annual = baseline_data.resample('YE').sum()[self.prcp_col]
+        baseline_annual = baseline_data.resample("YE").sum()[self.prcp_col]
 
         baseline_stats = {
-            'mean_annual': baseline_annual.mean(),
-            'std_annual': baseline_annual.std(),
-            'median_annual': baseline_annual.median(),
-            'min_annual': baseline_annual.min(),
-            'max_annual': baseline_annual.max(),
-            'p25_annual': baseline_annual.quantile(0.25),
-            'p75_annual': baseline_annual.quantile(0.75),
-            'n_years': len(baseline_annual)
+            "mean_annual": baseline_annual.mean(),
+            "std_annual": baseline_annual.std(),
+            "median_annual": baseline_annual.median(),
+            "min_annual": baseline_annual.min(),
+            "max_annual": baseline_annual.max(),
+            "p25_annual": baseline_annual.quantile(0.25),
+            "p75_annual": baseline_annual.quantile(0.75),
+            "n_years": len(baseline_annual),
         }
 
         print(f"\n📈 Baseline Statistics ({self.baseline_start}-{self.baseline_end}):")
         print(f"   Mean annual precipitation: {baseline_stats['mean_annual']:.1f} mm")
         print(f"   Std deviation: {baseline_stats['std_annual']:.1f} mm")
-        print(f"   Range: {baseline_stats['min_annual']:.1f} - {baseline_stats['max_annual']:.1f} mm")
+        print(
+            f"   Range: {baseline_stats['min_annual']:.1f} - {baseline_stats['max_annual']:.1f} mm"
+        )
 
         return baseline_stats
 
     def calculate_precipitation_deficits(
-        self,
-        analysis_start_year: int,
-        analysis_end_year: int
+        self, analysis_start_year: int, analysis_end_year: int
     ) -> pd.DataFrame:
         """
         Calculate precipitation deficits for analysis period.
@@ -130,40 +138,42 @@ class DroughtAnalyzer:
             DataFrame with annual precipitation, deficit, and percentage deficit
         """
         baseline_stats = self.calculate_baseline_statistics()
-        baseline_mean = baseline_stats['mean_annual']
+        baseline_mean = baseline_stats["mean_annual"]
 
         # Get annual totals
         annual_totals = self.calculate_annual_totals()
 
         # Filter to analysis period
         analysis_data = annual_totals[
-            (annual_totals['year'] >= analysis_start_year) &
-            (annual_totals['year'] <= analysis_end_year)
+            (annual_totals["year"] >= analysis_start_year)
+            & (annual_totals["year"] <= analysis_end_year)
         ].copy()
 
         # Calculate deficits
-        analysis_data['baseline_normal'] = baseline_mean
-        analysis_data['deficit_mm'] = baseline_mean - analysis_data[self.prcp_col]
-        analysis_data['deficit_percent'] = (
+        analysis_data["baseline_normal"] = baseline_mean
+        analysis_data["deficit_mm"] = baseline_mean - analysis_data[self.prcp_col]
+        analysis_data["deficit_percent"] = (
             (baseline_mean - analysis_data[self.prcp_col]) / baseline_mean * 100
         )
-        analysis_data['anomaly_mm'] = analysis_data[self.prcp_col] - baseline_mean
-        analysis_data['percent_of_normal'] = (
+        analysis_data["anomaly_mm"] = analysis_data[self.prcp_col] - baseline_mean
+        analysis_data["percent_of_normal"] = (
             analysis_data[self.prcp_col] / baseline_mean * 100
         )
 
-        print(f"\n🔍 Precipitation Deficits ({analysis_start_year}-{analysis_end_year}):")
+        print(
+            f"\n🔍 Precipitation Deficits ({analysis_start_year}-{analysis_end_year}):"
+        )
         for _, row in analysis_data.iterrows():
-            status = "🔴 DEFICIT" if row['deficit_mm'] > 0 else "🟢 SURPLUS"
-            print(f"   {int(row['year'])}: {row[self.prcp_col]:.1f} mm "
-                  f"({row['percent_of_normal']:.1f}% of normal) {status}")
+            status = "🔴 DEFICIT" if row["deficit_mm"] > 0 else "🟢 SURPLUS"
+            print(
+                f"   {int(row['year'])}: {row[self.prcp_col]:.1f} mm "
+                f"({row['percent_of_normal']:.1f}% of normal) {status}"
+            )
 
         return analysis_data
 
     def calculate_spi(
-        self,
-        scale_months: int = 12,
-        distribution: str = 'gamma'
+        self, scale_months: int = 12, distribution: str = "gamma"
     ) -> pd.DataFrame:
         """
         Calculate Standardized Precipitation Index (SPI).
@@ -179,22 +189,23 @@ class DroughtAnalyzer:
             DataFrame with SPI values
         """
         # Resample to monthly data
-        monthly_prcp = self.precipitation_data.resample('ME').sum()
+        monthly_prcp = self.precipitation_data.resample("ME").sum()
 
         # Calculate rolling sum for the specified scale
-        rolling_prcp = monthly_prcp[self.prcp_col].rolling(
-            window=scale_months,
-            min_periods=scale_months
-        ).sum()
+        rolling_prcp = (
+            monthly_prcp[self.prcp_col]
+            .rolling(window=scale_months, min_periods=scale_months)
+            .sum()
+        )
 
         # Fit distribution to baseline period
         baseline_monthly = rolling_prcp[
-            (rolling_prcp.index.year >= self.baseline_start) &
-            (rolling_prcp.index.year <= self.baseline_end)
+            (rolling_prcp.index.year >= self.baseline_start)
+            & (rolling_prcp.index.year <= self.baseline_end)
         ].dropna()
 
         spi_values = None
-        use_gamma = distribution == 'gamma'
+        use_gamma = distribution == "gamma"
 
         if use_gamma:
             # Fit gamma distribution - filter out zeros for fitting
@@ -229,10 +240,10 @@ class DroughtAnalyzer:
             else:
                 spi_values = rolling_prcp * 0  # All zeros if no variance
 
-        spi_df = pd.DataFrame({
-            'precipitation': rolling_prcp,
-            f'SPI_{scale_months}': spi_values
-        }, index=rolling_prcp.index)
+        spi_df = pd.DataFrame(
+            {"precipitation": rolling_prcp, f"SPI_{scale_months}": spi_values},
+            index=rolling_prcp.index,
+        )
 
         return spi_df
 
@@ -261,11 +272,7 @@ class DroughtAnalyzer:
         else:
             return ("Extreme Drought", "🔴 Extreme Drought")
 
-    def analyze_drought_period(
-        self,
-        start_year: int,
-        end_year: int
-    ) -> Dict[str, any]:
+    def analyze_drought_period(self, start_year: int, end_year: int) -> Dict[str, any]:
         """
         Comprehensive drought analysis for a specific period.
 
@@ -290,37 +297,36 @@ class DroughtAnalyzer:
             spi_df = self.calculate_spi(scale_months=12)
             # Get SPI for drought period
             drought_spi = spi_df[
-                (spi_df.index.year >= start_year) &
-                (spi_df.index.year <= end_year)
+                (spi_df.index.year >= start_year) & (spi_df.index.year <= end_year)
             ]
         except Exception as e:
             print(f"⚠️ Warning: Could not calculate SPI - {e}")
             drought_spi = None
 
         # Calculate cumulative deficit
-        total_deficit = deficit_data['deficit_mm'].sum()
-        mean_deficit_percent = deficit_data['deficit_percent'].mean()
-        deficit_years = len(deficit_data[deficit_data['deficit_mm'] > 0])
+        total_deficit = deficit_data["deficit_mm"].sum()
+        mean_deficit_percent = deficit_data["deficit_percent"].mean()
+        deficit_years = len(deficit_data[deficit_data["deficit_mm"] > 0])
 
         # Identify worst year
-        worst_year_idx = deficit_data['deficit_mm'].idxmax()
-        worst_year = int(deficit_data.loc[worst_year_idx, 'year'])
-        worst_deficit = deficit_data.loc[worst_year_idx, 'deficit_mm']
-        worst_percent = deficit_data.loc[worst_year_idx, 'deficit_percent']
+        worst_year_idx = deficit_data["deficit_mm"].idxmax()
+        worst_year = int(deficit_data.loc[worst_year_idx, "year"])
+        worst_deficit = deficit_data.loc[worst_year_idx, "deficit_mm"]
+        worst_percent = deficit_data.loc[worst_year_idx, "deficit_percent"]
 
         results = {
-            'period': f"{start_year}-{end_year}",
-            'baseline_mean': baseline_stats['mean_annual'],
-            'total_deficit_mm': total_deficit,
-            'mean_annual_deficit_percent': mean_deficit_percent,
-            'deficit_years': deficit_years,
-            'total_years': len(deficit_data),
-            'worst_year': worst_year,
-            'worst_deficit_mm': worst_deficit,
-            'worst_deficit_percent': worst_percent,
-            'deficit_data': deficit_data,
-            'baseline_stats': baseline_stats,
-            'spi_data': drought_spi
+            "period": f"{start_year}-{end_year}",
+            "baseline_mean": baseline_stats["mean_annual"],
+            "total_deficit_mm": total_deficit,
+            "mean_annual_deficit_percent": mean_deficit_percent,
+            "deficit_years": deficit_years,
+            "total_years": len(deficit_data),
+            "worst_year": worst_year,
+            "worst_deficit_mm": worst_deficit,
+            "worst_deficit_percent": worst_percent,
+            "deficit_data": deficit_data,
+            "baseline_stats": baseline_stats,
+            "spi_data": drought_spi,
         }
 
         # Print summary
@@ -329,11 +335,13 @@ class DroughtAnalyzer:
         print(f"   Total cumulative deficit: {total_deficit:.1f} mm")
         print(f"   Mean annual deficit: {mean_deficit_percent:.1f}%")
         print(f"   Years with deficit: {deficit_years}/{len(deficit_data)}")
-        print(f"   Worst year: {worst_year} ({worst_deficit:.1f} mm deficit, {worst_percent:.1f}% below normal)")
+        print(
+            f"   Worst year: {worst_year} ({worst_deficit:.1f} mm deficit, {worst_percent:.1f}% below normal)"
+        )
 
         if drought_spi is not None and not drought_spi.empty:
-            mean_spi = drought_spi[f'SPI_12'].mean()
-            min_spi = drought_spi[f'SPI_12'].min()
+            mean_spi = drought_spi[f"SPI_12"].mean()
+            min_spi = drought_spi[f"SPI_12"].min()
             _, spi_category = self.classify_drought_severity(mean_spi)
             print(f"   Mean SPI-12: {mean_spi:.2f} {spi_category}")
             print(f"   Minimum SPI-12: {min_spi:.2f}")
@@ -344,7 +352,7 @@ class DroughtAnalyzer:
         self,
         threshold_mm: float = 1.0,
         start_year: Optional[int] = None,
-        end_year: Optional[int] = None
+        end_year: Optional[int] = None,
     ) -> pd.DataFrame:
         """
         Calculate consecutive dry days (CDD).
@@ -387,11 +395,9 @@ class DroughtAnalyzer:
             yearly_cdd[year] = max_consecutive
 
         cdd_df = pd.DataFrame.from_dict(
-            yearly_cdd,
-            orient='index',
-            columns=['max_consecutive_dry_days']
+            yearly_cdd, orient="index", columns=["max_consecutive_dry_days"]
         )
-        cdd_df.index.name = 'year'
+        cdd_df.index.name = "year"
 
         print(f"\n🌵 Consecutive Dry Days Analysis (threshold: {threshold_mm} mm):")
         for year, row in cdd_df.iterrows():
@@ -399,7 +405,9 @@ class DroughtAnalyzer:
 
         return cdd_df
 
-    def export_analysis_summary(self, output_file: str, drought_period: Tuple[int, int]) -> None:
+    def export_analysis_summary(
+        self, output_file: str, drought_period: Tuple[int, int]
+    ) -> None:
         """
         Export comprehensive drought analysis summary to CSV.
 
@@ -412,8 +420,8 @@ class DroughtAnalyzer:
         results = self.analyze_drought_period(start_year, end_year)
 
         # Prepare export data
-        deficit_data = results['deficit_data'].copy()
-        deficit_data['station'] = self.station_name
+        deficit_data = results["deficit_data"].copy()
+        deficit_data["station"] = self.station_name
 
         # Export
         deficit_data.to_csv(output_file, index=True)
@@ -438,16 +446,15 @@ class MultiStationDroughtAnalyzer:
         for station_name, data in station_data.items():
             try:
                 self.analyzers[station_name] = DroughtAnalyzer(
-                    precipitation_data=data,
-                    station_name=station_name
+                    precipitation_data=data, station_name=station_name
                 )
             except Exception as e:
-                print(f"⚠️ Warning: Could not initialize analyzer for {station_name}: {e}")
+                print(
+                    f"⚠️ Warning: Could not initialize analyzer for {station_name}: {e}"
+                )
 
     def analyze_regional_drought(
-        self,
-        start_year: int,
-        end_year: int
+        self, start_year: int, end_year: int
     ) -> Dict[str, Dict]:
         """
         Analyze drought across all stations.
@@ -476,12 +483,14 @@ class MultiStationDroughtAnalyzer:
         print(f"\n🌍 Regional Summary:")
         print("=" * 80)
 
-        deficits = [r['mean_annual_deficit_percent'] for r in regional_results.values()]
-        worst_years = [r['worst_year'] for r in regional_results.values()]
+        deficits = [r["mean_annual_deficit_percent"] for r in regional_results.values()]
+        worst_years = [r["worst_year"] for r in regional_results.values()]
 
         print(f"   Stations analyzed: {len(regional_results)}")
         print(f"   Mean regional deficit: {np.mean(deficits):.1f}%")
         print(f"   Range: {np.min(deficits):.1f}% to {np.max(deficits):.1f}%")
-        print(f"   Most common worst year: {max(set(worst_years), key=worst_years.count)}")
+        print(
+            f"   Most common worst year: {max(set(worst_years), key=worst_years.count)}"
+        )
 
         return regional_results

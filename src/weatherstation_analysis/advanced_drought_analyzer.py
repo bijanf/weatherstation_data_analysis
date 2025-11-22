@@ -61,11 +61,7 @@ class DroughtReturnPeriodAnalyzer:
         # Fit Gumbel distribution (for maxima - deficits are "maxima" of water shortage)
         loc, scale = stats.gumbel_r.fit(deficits)
 
-        return {
-            'location': loc,
-            'scale': scale,
-            'distribution': 'gumbel_r'
-        }
+        return {"location": loc, "scale": scale, "distribution": "gumbel_r"}
 
     def fit_gev_to_deficits(self) -> Dict[str, float]:
         """
@@ -81,17 +77,10 @@ class DroughtReturnPeriodAnalyzer:
         # Fit GEV distribution
         shape, loc, scale = stats.genextreme.fit(deficits)
 
-        return {
-            'shape': shape,
-            'location': loc,
-            'scale': scale,
-            'distribution': 'gev'
-        }
+        return {"shape": shape, "location": loc, "scale": scale, "distribution": "gev"}
 
     def calculate_return_period(
-        self,
-        deficit_value: float,
-        distribution: str = 'gumbel'
+        self, deficit_value: float, distribution: str = "gumbel"
     ) -> float:
         """
         Calculate return period for a given deficit value.
@@ -103,27 +92,27 @@ class DroughtReturnPeriodAnalyzer:
         Returns:
             Return period in years
         """
-        if distribution == 'gumbel':
+        if distribution == "gumbel":
             params = self.fit_gumbel_to_deficits()
             exceedance_prob = 1 - stats.gumbel_r.cdf(
-                deficit_value, params['location'], params['scale']
+                deficit_value, params["location"], params["scale"]
             )
         else:
             params = self.fit_gev_to_deficits()
             exceedance_prob = 1 - stats.genextreme.cdf(
-                deficit_value, params['shape'], params['location'], params['scale']
+                deficit_value, params["shape"], params["location"], params["scale"]
             )
 
         # Return period = 1 / exceedance probability
         if exceedance_prob > 0:
             return 1 / exceedance_prob
         else:
-            return float('inf')
+            return float("inf")
 
     def calculate_return_levels(
         self,
         return_periods: List[int] = [2, 5, 10, 25, 50, 100],
-        distribution: str = 'gumbel'
+        distribution: str = "gumbel",
     ) -> pd.DataFrame:
         """
         Calculate deficit levels for various return periods.
@@ -135,24 +124,28 @@ class DroughtReturnPeriodAnalyzer:
         Returns:
             DataFrame with return periods and corresponding deficit levels
         """
-        if distribution == 'gumbel':
+        if distribution == "gumbel":
             params = self.fit_gumbel_to_deficits()
             levels = [
-                stats.gumbel_r.ppf(1 - 1/T, params['location'], params['scale'])
+                stats.gumbel_r.ppf(1 - 1 / T, params["location"], params["scale"])
                 for T in return_periods
             ]
         else:
             params = self.fit_gev_to_deficits()
             levels = [
-                stats.genextreme.ppf(1 - 1/T, params['shape'], params['location'], params['scale'])
+                stats.genextreme.ppf(
+                    1 - 1 / T, params["shape"], params["location"], params["scale"]
+                )
                 for T in return_periods
             ]
 
-        return pd.DataFrame({
-            'return_period_years': return_periods,
-            'deficit_percent': levels,
-            'distribution': distribution
-        })
+        return pd.DataFrame(
+            {
+                "return_period_years": return_periods,
+                "deficit_percent": levels,
+                "distribution": distribution,
+            }
+        )
 
     def analyze_historical_extremes(self) -> pd.DataFrame:
         """
@@ -167,21 +160,23 @@ class DroughtReturnPeriodAnalyzer:
             deficit = self.deficit_percent.loc[year]
 
             # Calculate return period using both distributions
-            rp_gumbel = self.calculate_return_period(deficit, 'gumbel')
-            rp_gev = self.calculate_return_period(deficit, 'gev')
+            rp_gumbel = self.calculate_return_period(deficit, "gumbel")
+            rp_gev = self.calculate_return_period(deficit, "gev")
 
-            results.append({
-                'year': year,
-                'precipitation_mm': self.annual_prcp.loc[year],
-                'deficit_mm': self.deficit_mm.loc[year],
-                'deficit_percent': deficit,
-                'return_period_gumbel': rp_gumbel,
-                'return_period_gev': rp_gev,
-                'is_drought': deficit > 0
-            })
+            results.append(
+                {
+                    "year": year,
+                    "precipitation_mm": self.annual_prcp.loc[year],
+                    "deficit_mm": self.deficit_mm.loc[year],
+                    "deficit_percent": deficit,
+                    "return_period_gumbel": rp_gumbel,
+                    "return_period_gev": rp_gev,
+                    "is_drought": deficit > 0,
+                }
+            )
 
         df = pd.DataFrame(results)
-        df = df.sort_values('deficit_percent', ascending=False)
+        df = df.sort_values("deficit_percent", ascending=False)
 
         return df
 
@@ -193,8 +188,8 @@ class DroughtReturnPeriodAnalyzer:
             DataFrame ranking drought years (deficit > 0)
         """
         all_years = self.analyze_historical_extremes()
-        droughts = all_years[all_years['is_drought']].copy()
-        droughts['rank'] = range(1, len(droughts) + 1)
+        droughts = all_years[all_years["is_drought"]].copy()
+        droughts["rank"] = range(1, len(droughts) + 1)
 
         return droughts
 
@@ -212,7 +207,7 @@ class CompoundEventAnalyzer:
         precipitation_data: pd.DataFrame,
         temperature_data: pd.DataFrame,
         baseline_start: int = 1981,
-        baseline_end: int = 2010
+        baseline_end: int = 2010,
     ):
         """
         Initialize compound event analyzer.
@@ -233,7 +228,7 @@ class CompoundEventAnalyzer:
 
     def _merge_data(self) -> pd.DataFrame:
         """Merge precipitation and temperature data."""
-        combined = self.prcp_data.join(self.temp_data, how='outer')
+        combined = self.prcp_data.join(self.temp_data, how="outer")
         return combined
 
     def calculate_annual_anomalies(self) -> pd.DataFrame:
@@ -244,8 +239,16 @@ class CompoundEventAnalyzer:
             DataFrame with annual anomalies relative to baseline
         """
         # Determine column names
-        prcp_col = [c for c in self.combined.columns if 'prcp' in c.lower() or 'precipitation' in c.lower()]
-        temp_col = [c for c in self.combined.columns if 'tmax' in c.lower() or 'tmean' in c.lower()]
+        prcp_col = [
+            c
+            for c in self.combined.columns
+            if "prcp" in c.lower() or "precipitation" in c.lower()
+        ]
+        temp_col = [
+            c
+            for c in self.combined.columns
+            if "tmax" in c.lower() or "tmean" in c.lower()
+        ]
 
         if not prcp_col or not temp_col:
             raise ValueError("Missing precipitation or temperature columns")
@@ -254,16 +257,13 @@ class CompoundEventAnalyzer:
         temp_col = temp_col[0]
 
         # Calculate annual values
-        annual = self.combined.resample('YE').agg({
-            prcp_col: 'sum',
-            temp_col: 'mean'
-        })
-        annual['year'] = annual.index.year
+        annual = self.combined.resample("YE").agg({prcp_col: "sum", temp_col: "mean"})
+        annual["year"] = annual.index.year
 
         # Calculate baseline means
         baseline = annual[
-            (annual['year'] >= self.baseline_start) &
-            (annual['year'] <= self.baseline_end)
+            (annual["year"] >= self.baseline_start)
+            & (annual["year"] <= self.baseline_end)
         ]
 
         prcp_baseline_mean = baseline[prcp_col].mean()
@@ -272,16 +272,22 @@ class CompoundEventAnalyzer:
         temp_baseline_std = baseline[temp_col].std()
 
         # Calculate standardized anomalies
-        annual['prcp_anomaly_std'] = (annual[prcp_col] - prcp_baseline_mean) / prcp_baseline_std
-        annual['temp_anomaly_std'] = (annual[temp_col] - temp_baseline_mean) / temp_baseline_std
-        annual['prcp_anomaly_percent'] = ((annual[prcp_col] - prcp_baseline_mean) / prcp_baseline_mean) * 100
-        annual['temp_anomaly_celsius'] = annual[temp_col] - temp_baseline_mean
+        annual["prcp_anomaly_std"] = (
+            annual[prcp_col] - prcp_baseline_mean
+        ) / prcp_baseline_std
+        annual["temp_anomaly_std"] = (
+            annual[temp_col] - temp_baseline_mean
+        ) / temp_baseline_std
+        annual["prcp_anomaly_percent"] = (
+            (annual[prcp_col] - prcp_baseline_mean) / prcp_baseline_mean
+        ) * 100
+        annual["temp_anomaly_celsius"] = annual[temp_col] - temp_baseline_mean
 
         # Identify compound events (drought + heat)
         # Drought: prcp anomaly < -1 std, Heat: temp anomaly > +1 std
-        annual['is_drought'] = annual['prcp_anomaly_std'] < -1.0
-        annual['is_heat'] = annual['temp_anomaly_std'] > 1.0
-        annual['is_compound'] = annual['is_drought'] & annual['is_heat']
+        annual["is_drought"] = annual["prcp_anomaly_std"] < -1.0
+        annual["is_heat"] = annual["temp_anomaly_std"] > 1.0
+        annual["is_compound"] = annual["is_drought"] & annual["is_heat"]
 
         return annual
 
@@ -295,9 +301,9 @@ class CompoundEventAnalyzer:
         annual = self.calculate_annual_anomalies()
 
         n_total = len(annual)
-        n_drought = annual['is_drought'].sum()
-        n_heat = annual['is_heat'].sum()
-        n_compound = annual['is_compound'].sum()
+        n_drought = annual["is_drought"].sum()
+        n_heat = annual["is_heat"].sum()
+        n_compound = annual["is_compound"].sum()
 
         # Marginal probabilities
         p_drought = n_drought / n_total
@@ -313,24 +319,24 @@ class CompoundEventAnalyzer:
         if p_compound_indep > 0:
             dependence_ratio = p_compound_obs / p_compound_indep
         else:
-            dependence_ratio = float('nan')
+            dependence_ratio = float("nan")
 
         # Conditional probabilities
         p_heat_given_drought = n_compound / n_drought if n_drought > 0 else 0
         p_drought_given_heat = n_compound / n_heat if n_heat > 0 else 0
 
         return {
-            'n_years_total': n_total,
-            'n_drought_years': n_drought,
-            'n_heat_years': n_heat,
-            'n_compound_years': n_compound,
-            'p_drought': p_drought,
-            'p_heat': p_heat,
-            'p_compound_observed': p_compound_obs,
-            'p_compound_independent': p_compound_indep,
-            'dependence_ratio': dependence_ratio,
-            'p_heat_given_drought': p_heat_given_drought,
-            'p_drought_given_heat': p_drought_given_heat
+            "n_years_total": n_total,
+            "n_drought_years": n_drought,
+            "n_heat_years": n_heat,
+            "n_compound_years": n_compound,
+            "p_drought": p_drought,
+            "p_heat": p_heat,
+            "p_compound_observed": p_compound_obs,
+            "p_compound_independent": p_compound_indep,
+            "dependence_ratio": dependence_ratio,
+            "p_heat_given_drought": p_heat_given_drought,
+            "p_drought_given_heat": p_drought_given_heat,
         }
 
     def identify_compound_events(self) -> pd.DataFrame:
@@ -341,26 +347,23 @@ class CompoundEventAnalyzer:
             DataFrame with compound event details
         """
         annual = self.calculate_annual_anomalies()
-        compound_years = annual[annual['is_compound']].copy()
+        compound_years = annual[annual["is_compound"]].copy()
 
         if len(compound_years) == 0:
             print("No compound events found in the record")
             return pd.DataFrame()
 
         # Calculate severity index (combined drought + heat)
-        compound_years['severity_index'] = (
-            abs(compound_years['prcp_anomaly_std']) +
-            compound_years['temp_anomaly_std']
+        compound_years["severity_index"] = (
+            abs(compound_years["prcp_anomaly_std"]) + compound_years["temp_anomaly_std"]
         )
 
-        compound_years = compound_years.sort_values('severity_index', ascending=False)
+        compound_years = compound_years.sort_values("severity_index", ascending=False)
 
         return compound_years
 
     def analyze_drought_period_temperature(
-        self,
-        start_year: int,
-        end_year: int
+        self, start_year: int, end_year: int
     ) -> Dict[str, Any]:
         """
         Analyze temperature conditions during a specific drought period.
@@ -375,19 +378,20 @@ class CompoundEventAnalyzer:
         annual = self.calculate_annual_anomalies()
 
         drought_period = annual[
-            (annual['year'] >= start_year) &
-            (annual['year'] <= end_year)
+            (annual["year"] >= start_year) & (annual["year"] <= end_year)
         ]
 
         return {
-            'period': f"{start_year}-{end_year}",
-            'mean_temp_anomaly': drought_period['temp_anomaly_celsius'].mean(),
-            'max_temp_anomaly': drought_period['temp_anomaly_celsius'].max(),
-            'compound_years': drought_period['is_compound'].sum(),
-            'total_years': len(drought_period),
-            'compound_fraction': drought_period['is_compound'].mean(),
-            'mean_prcp_anomaly_percent': drought_period['prcp_anomaly_percent'].mean(),
-            'years_detail': drought_period[['year', 'prcp_anomaly_percent', 'temp_anomaly_celsius', 'is_compound']].to_dict('records')
+            "period": f"{start_year}-{end_year}",
+            "mean_temp_anomaly": drought_period["temp_anomaly_celsius"].mean(),
+            "max_temp_anomaly": drought_period["temp_anomaly_celsius"].max(),
+            "compound_years": drought_period["is_compound"].sum(),
+            "total_years": len(drought_period),
+            "compound_fraction": drought_period["is_compound"].mean(),
+            "mean_prcp_anomaly_percent": drought_period["prcp_anomaly_percent"].mean(),
+            "years_detail": drought_period[
+                ["year", "prcp_anomaly_percent", "temp_anomaly_celsius", "is_compound"]
+            ].to_dict("records"),
         }
 
 
@@ -412,9 +416,7 @@ class DroughtDSAAnalyzer:
         self.stations = list(multi_station_spi.keys())
 
     def identify_drought_events(
-        self,
-        spi_threshold: float = -1.0,
-        min_duration_months: int = 3
+        self, spi_threshold: float = -1.0, min_duration_months: int = 3
     ) -> pd.DataFrame:
         """
         Identify distinct drought events across all stations.
@@ -430,7 +432,7 @@ class DroughtDSAAnalyzer:
 
         for station, spi_df in self.station_spi.items():
             # Find SPI column
-            spi_col = [c for c in spi_df.columns if 'SPI' in c][0]
+            spi_col = [c for c in spi_df.columns if "SPI" in c][0]
             spi_series = spi_df[spi_col].dropna()
 
             # Identify drought periods (SPI below threshold)
@@ -447,25 +449,28 @@ class DroughtDSAAnalyzer:
                 duration = (end - start).days // 30 + 1  # Approximate months
 
                 if duration >= min_duration_months:
-                    drought_spi = spi_series[(spi_series.index >= start) & (spi_series.index <= end)]
+                    drought_spi = spi_series[
+                        (spi_series.index >= start) & (spi_series.index <= end)
+                    ]
 
-                    events.append({
-                        'station': station,
-                        'start_date': start,
-                        'end_date': end,
-                        'duration_months': duration,
-                        'mean_spi': drought_spi.mean(),
-                        'min_spi': drought_spi.min(),
-                        'severity': abs(drought_spi.mean()) * duration,  # Severity index
-                        'peak_month': drought_spi.idxmin()
-                    })
+                    events.append(
+                        {
+                            "station": station,
+                            "start_date": start,
+                            "end_date": end,
+                            "duration_months": duration,
+                            "mean_spi": drought_spi.mean(),
+                            "min_spi": drought_spi.min(),
+                            "severity": abs(drought_spi.mean())
+                            * duration,  # Severity index
+                            "peak_month": drought_spi.idxmin(),
+                        }
+                    )
 
         return pd.DataFrame(events)
 
     def calculate_area_coverage(
-        self,
-        date: pd.Timestamp,
-        spi_threshold: float = -1.0
+        self, date: pd.Timestamp, spi_threshold: float = -1.0
     ) -> Dict[str, Any]:
         """
         Calculate drought area coverage for a specific date.
@@ -481,14 +486,14 @@ class DroughtDSAAnalyzer:
         total_stations = 0
 
         for station, spi_df in self.station_spi.items():
-            spi_col = [c for c in spi_df.columns if 'SPI' in c][0]
+            spi_col = [c for c in spi_df.columns if "SPI" in c][0]
 
             # Find closest date
             if date in spi_df.index:
                 spi_value = spi_df.loc[date, spi_col]
             else:
                 # Find nearest date
-                idx = spi_df.index.get_indexer([date], method='nearest')[0]
+                idx = spi_df.index.get_indexer([date], method="nearest")[0]
                 spi_value = spi_df.iloc[idx][spi_col]
 
             total_stations += 1
@@ -496,18 +501,17 @@ class DroughtDSAAnalyzer:
                 stations_in_drought.append(station)
 
         return {
-            'date': date,
-            'stations_in_drought': stations_in_drought,
-            'n_stations_drought': len(stations_in_drought),
-            'n_stations_total': total_stations,
-            'area_fraction': len(stations_in_drought) / total_stations if total_stations > 0 else 0
+            "date": date,
+            "stations_in_drought": stations_in_drought,
+            "n_stations_drought": len(stations_in_drought),
+            "n_stations_total": total_stations,
+            "area_fraction": (
+                len(stations_in_drought) / total_stations if total_stations > 0 else 0
+            ),
         }
 
     def calculate_dsa_timeseries(
-        self,
-        start_year: int,
-        end_year: int,
-        spi_threshold: float = -1.0
+        self, start_year: int, end_year: int, spi_threshold: float = -1.0
     ) -> pd.DataFrame:
         """
         Calculate monthly DSA metrics over time.
@@ -522,9 +526,7 @@ class DroughtDSAAnalyzer:
         """
         # Generate monthly date range
         dates = pd.date_range(
-            start=f'{start_year}-01-01',
-            end=f'{end_year}-12-31',
-            freq='ME'
+            start=f"{start_year}-01-01", end=f"{end_year}-12-31", freq="ME"
         )
 
         results = []
@@ -535,20 +537,22 @@ class DroughtDSAAnalyzer:
             # Calculate mean severity across stations
             severities = []
             for station, spi_df in self.station_spi.items():
-                spi_col = [c for c in spi_df.columns if 'SPI' in c][0]
+                spi_col = [c for c in spi_df.columns if "SPI" in c][0]
                 if date in spi_df.index:
                     spi_val = spi_df.loc[date, spi_col]
                     if not pd.isna(spi_val) and spi_val < spi_threshold:
                         severities.append(abs(spi_val))
 
-            results.append({
-                'date': date,
-                'year': date.year,
-                'month': date.month,
-                'area_fraction': coverage['area_fraction'],
-                'n_stations_drought': coverage['n_stations_drought'],
-                'mean_severity': np.mean(severities) if severities else 0
-            })
+            results.append(
+                {
+                    "date": date,
+                    "year": date.year,
+                    "month": date.month,
+                    "area_fraction": coverage["area_fraction"],
+                    "n_stations_drought": coverage["n_stations_drought"],
+                    "mean_severity": np.mean(severities) if severities else 0,
+                }
+            )
 
         return pd.DataFrame(results)
 
@@ -599,15 +603,16 @@ class DroughtRegimeAnalyzer:
             t_stat, p_value = np.nan, np.nan
 
         return {
-            'change_point_year': int(change_year),
-            'change_point_index': max_idx,
-            'mean_before': np.mean(before),
-            'mean_after': np.mean(after),
-            'change_magnitude': np.mean(after) - np.mean(before),
-            'change_percent': ((np.mean(after) - np.mean(before)) / np.mean(before)) * 100,
-            't_statistic': t_stat,
-            'p_value': p_value,
-            'cusum_series': cusum
+            "change_point_year": int(change_year),
+            "change_point_index": max_idx,
+            "mean_before": np.mean(before),
+            "mean_after": np.mean(after),
+            "change_magnitude": np.mean(after) - np.mean(before),
+            "change_percent": ((np.mean(after) - np.mean(before)) / np.mean(before))
+            * 100,
+            "t_statistic": t_stat,
+            "p_value": p_value,
+            "cusum_series": cusum,
         }
 
     def analyze_decadal_trends(self) -> pd.DataFrame:
@@ -617,33 +622,31 @@ class DroughtRegimeAnalyzer:
         Returns:
             DataFrame with decadal statistics
         """
-        df = pd.DataFrame({
-            'year': self.years,
-            'precipitation': self.annual_prcp.values
-        })
+        df = pd.DataFrame(
+            {"year": self.years, "precipitation": self.annual_prcp.values}
+        )
 
         # Assign decades
-        df['decade'] = (df['year'] // 10) * 10
+        df["decade"] = (df["year"] // 10) * 10
 
         # Calculate decadal statistics
-        decadal = df.groupby('decade').agg({
-            'precipitation': ['mean', 'std', 'min', 'max', 'count']
-        }).round(1)
+        decadal = (
+            df.groupby("decade")
+            .agg({"precipitation": ["mean", "std", "min", "max", "count"]})
+            .round(1)
+        )
 
-        decadal.columns = ['mean_mm', 'std_mm', 'min_mm', 'max_mm', 'n_years']
+        decadal.columns = ["mean_mm", "std_mm", "min_mm", "max_mm", "n_years"]
 
         # Calculate drought frequency per decade (years below mean)
-        overall_mean = df['precipitation'].mean()
-        df['is_deficit'] = df['precipitation'] < overall_mean
-        drought_freq = df.groupby('decade')['is_deficit'].mean()
-        decadal['drought_frequency'] = drought_freq
+        overall_mean = df["precipitation"].mean()
+        df["is_deficit"] = df["precipitation"] < overall_mean
+        drought_freq = df.groupby("decade")["is_deficit"].mean()
+        decadal["drought_frequency"] = drought_freq
 
         return decadal
 
-    def calculate_moving_statistics(
-        self,
-        window: int = 10
-    ) -> pd.DataFrame:
+    def calculate_moving_statistics(self, window: int = 10) -> pd.DataFrame:
         """
         Calculate moving window statistics to visualize trends.
 
@@ -653,18 +656,19 @@ class DroughtRegimeAnalyzer:
         Returns:
             DataFrame with moving statistics
         """
-        df = pd.DataFrame({
-            'year': self.years,
-            'precipitation': self.annual_prcp.values
-        })
+        df = pd.DataFrame(
+            {"year": self.years, "precipitation": self.annual_prcp.values}
+        )
 
-        df['moving_mean'] = df['precipitation'].rolling(window=window, center=True).mean()
-        df['moving_std'] = df['precipitation'].rolling(window=window, center=True).std()
-        df['moving_min'] = df['precipitation'].rolling(window=window, center=True).min()
-        df['moving_max'] = df['precipitation'].rolling(window=window, center=True).max()
+        df["moving_mean"] = (
+            df["precipitation"].rolling(window=window, center=True).mean()
+        )
+        df["moving_std"] = df["precipitation"].rolling(window=window, center=True).std()
+        df["moving_min"] = df["precipitation"].rolling(window=window, center=True).min()
+        df["moving_max"] = df["precipitation"].rolling(window=window, center=True).max()
 
         # Calculate coefficient of variation
-        df['moving_cv'] = df['moving_std'] / df['moving_mean'] * 100
+        df["moving_cv"] = df["moving_std"] / df["moving_mean"] * 100
 
         return df
 
@@ -717,10 +721,7 @@ class WaveletDroughtAnalyzer:
 
         return periods, psd
 
-    def identify_dominant_periods(
-        self,
-        n_peaks: int = 5
-    ) -> pd.DataFrame:
+    def identify_dominant_periods(self, n_peaks: int = 5) -> pd.DataFrame:
         """
         Identify dominant periodicities in the precipitation record.
 
@@ -754,18 +755,18 @@ class WaveletDroughtAnalyzer:
             else:
                 interpretation = "Other"
 
-            results.append({
-                'period_years': round(period, 1),
-                'spectral_power': power,
-                'interpretation': interpretation
-            })
+            results.append(
+                {
+                    "period_years": round(period, 1),
+                    "spectral_power": power,
+                    "interpretation": interpretation,
+                }
+            )
 
         return pd.DataFrame(results)
 
     def calculate_running_correlation_enso(
-        self,
-        enso_index: Optional[pd.Series] = None,
-        window: int = 21
+        self, enso_index: Optional[pd.Series] = None, window: int = 21
     ) -> pd.DataFrame:
         """
         Calculate running correlation with ENSO index.
@@ -780,11 +781,14 @@ class WaveletDroughtAnalyzer:
         if enso_index is None:
             # Generate synthetic ENSO proxy (for demonstration)
             # In real application, use actual ENSO data
-            print("Note: Using synthetic ENSO proxy. For publication, use actual ENSO index.")
+            print(
+                "Note: Using synthetic ENSO proxy. For publication, use actual ENSO index."
+            )
             np.random.seed(42)
             enso_index = pd.Series(
-                np.sin(2 * np.pi * np.arange(len(self.years)) / 4) + np.random.normal(0, 0.3, len(self.years)),
-                index=self.years
+                np.sin(2 * np.pi * np.arange(len(self.years)) / 4)
+                + np.random.normal(0, 0.3, len(self.years)),
+                index=self.years,
             )
 
         # Ensure same index
@@ -799,18 +803,15 @@ class WaveletDroughtAnalyzer:
         half_window = window // 2
 
         for i in range(half_window, len(common_idx) - half_window):
-            window_prcp = prcp.iloc[i-half_window:i+half_window+1]
-            window_enso = enso.iloc[i-half_window:i+half_window+1]
+            window_prcp = prcp.iloc[i - half_window : i + half_window + 1]
+            window_enso = enso.iloc[i - half_window : i + half_window + 1]
 
             corr, p_val = stats.pearsonr(window_prcp, window_enso)
 
             correlations.append(corr)
             center_years.append(common_idx[i])
 
-        return pd.DataFrame({
-            'year': center_years,
-            'correlation': correlations
-        })
+        return pd.DataFrame({"year": center_years, "correlation": correlations})
 
 
 class MegadroughtAnalyzer:
@@ -826,7 +827,7 @@ class MegadroughtAnalyzer:
         precipitation_data: pd.DataFrame,
         temperature_data: Optional[pd.DataFrame] = None,
         baseline_start: int = 1981,
-        baseline_end: int = 2010
+        baseline_end: int = 2010,
     ):
         """
         Initialize megadrought analyzer.
@@ -843,22 +844,24 @@ class MegadroughtAnalyzer:
         self.baseline_end = baseline_end
 
         # Calculate annual totals
-        prcp_col = [c for c in self.prcp_data.columns if 'prcp' in c.lower() or 'precipitation' in c.lower()][0]
-        self.annual_prcp = self.prcp_data[prcp_col].resample('YE').sum()
+        prcp_col = [
+            c
+            for c in self.prcp_data.columns
+            if "prcp" in c.lower() or "precipitation" in c.lower()
+        ][0]
+        self.annual_prcp = self.prcp_data[prcp_col].resample("YE").sum()
         self.annual_prcp.index = self.annual_prcp.index.year
 
         # Calculate baseline
         baseline_years = self.annual_prcp[
-            (self.annual_prcp.index >= baseline_start) &
-            (self.annual_prcp.index <= baseline_end)
+            (self.annual_prcp.index >= baseline_start)
+            & (self.annual_prcp.index <= baseline_end)
         ]
         self.baseline_mean = baseline_years.mean()
         self.baseline_std = baseline_years.std()
 
     def comprehensive_analysis(
-        self,
-        drought_start: int,
-        drought_end: int
+        self, drought_start: int, drought_end: int
     ) -> Dict[str, Any]:
         """
         Perform comprehensive megadrought analysis.
@@ -876,77 +879,76 @@ class MegadroughtAnalyzer:
         print("📊 Analyzing return periods...")
         rp_analyzer = DroughtReturnPeriodAnalyzer(self.annual_prcp, self.baseline_mean)
 
-        results['return_periods'] = {
-            'all_years_ranked': rp_analyzer.get_drought_ranking(),
-            'return_levels': rp_analyzer.calculate_return_levels(),
-            'gumbel_params': rp_analyzer.fit_gumbel_to_deficits(),
-            'gev_params': rp_analyzer.fit_gev_to_deficits()
+        results["return_periods"] = {
+            "all_years_ranked": rp_analyzer.get_drought_ranking(),
+            "return_levels": rp_analyzer.calculate_return_levels(),
+            "gumbel_params": rp_analyzer.fit_gumbel_to_deficits(),
+            "gev_params": rp_analyzer.fit_gev_to_deficits(),
         }
 
         # Calculate return period for drought period average
         drought_years = self.annual_prcp[
-            (self.annual_prcp.index >= drought_start) &
-            (self.annual_prcp.index <= drought_end)
+            (self.annual_prcp.index >= drought_start)
+            & (self.annual_prcp.index <= drought_end)
         ]
         mean_drought_prcp = drought_years.mean()
-        mean_deficit_percent = ((self.baseline_mean - mean_drought_prcp) / self.baseline_mean) * 100
+        mean_deficit_percent = (
+            (self.baseline_mean - mean_drought_prcp) / self.baseline_mean
+        ) * 100
 
-        results['drought_period_return_period'] = rp_analyzer.calculate_return_period(
-            mean_deficit_percent, 'gev'
+        results["drought_period_return_period"] = rp_analyzer.calculate_return_period(
+            mean_deficit_percent, "gev"
         )
 
         # 2. Compound Event Analysis (if temperature data available)
         if self.temp_data is not None:
             print("🌡️ Analyzing compound drought-heat events...")
             compound_analyzer = CompoundEventAnalyzer(
-                self.prcp_data, self.temp_data,
-                self.baseline_start, self.baseline_end
+                self.prcp_data, self.temp_data, self.baseline_start, self.baseline_end
             )
 
-            results['compound_events'] = {
-                'probabilities': compound_analyzer.calculate_joint_probability(),
-                'identified_events': compound_analyzer.identify_compound_events(),
-                'drought_period_temp': compound_analyzer.analyze_drought_period_temperature(
+            results["compound_events"] = {
+                "probabilities": compound_analyzer.calculate_joint_probability(),
+                "identified_events": compound_analyzer.identify_compound_events(),
+                "drought_period_temp": compound_analyzer.analyze_drought_period_temperature(
                     drought_start, drought_end
-                )
+                ),
             }
 
         # 3. Regime Analysis
         print("📈 Analyzing drought regime shifts...")
         regime_analyzer = DroughtRegimeAnalyzer(self.annual_prcp)
 
-        results['regime_analysis'] = {
-            'change_point': regime_analyzer.detect_change_points_cusum(),
-            'decadal_trends': regime_analyzer.analyze_decadal_trends(),
-            'moving_stats': regime_analyzer.calculate_moving_statistics()
+        results["regime_analysis"] = {
+            "change_point": regime_analyzer.detect_change_points_cusum(),
+            "decadal_trends": regime_analyzer.analyze_decadal_trends(),
+            "moving_stats": regime_analyzer.calculate_moving_statistics(),
         }
 
         # 4. Periodicity Analysis
         print("🔄 Analyzing drought periodicity...")
         wavelet_analyzer = WaveletDroughtAnalyzer(self.annual_prcp)
 
-        results['periodicity'] = {
-            'dominant_periods': wavelet_analyzer.identify_dominant_periods()
+        results["periodicity"] = {
+            "dominant_periods": wavelet_analyzer.identify_dominant_periods()
         }
 
         # 5. Historical Context
         print("📚 Establishing historical context...")
-        results['historical_context'] = self._calculate_historical_context(
+        results["historical_context"] = self._calculate_historical_context(
             drought_start, drought_end
         )
 
         return results
 
     def _calculate_historical_context(
-        self,
-        drought_start: int,
-        drought_end: int
+        self, drought_start: int, drought_end: int
     ) -> Dict[str, Any]:
         """Calculate where current drought stands in historical record."""
 
         drought_years = self.annual_prcp[
-            (self.annual_prcp.index >= drought_start) &
-            (self.annual_prcp.index <= drought_end)
+            (self.annual_prcp.index >= drought_start)
+            & (self.annual_prcp.index <= drought_end)
         ]
 
         # Mean deficit
@@ -954,7 +956,9 @@ class MegadroughtAnalyzer:
         deficit_percent = ((self.baseline_mean - mean_prcp) / self.baseline_mean) * 100
 
         # Count how many years in record had similar or worse conditions
-        annual_deficits = ((self.baseline_mean - self.annual_prcp) / self.baseline_mean) * 100
+        annual_deficits = (
+            (self.baseline_mean - self.annual_prcp) / self.baseline_mean
+        ) * 100
         worse_years = (annual_deficits >= deficit_percent).sum()
 
         # Consecutive year analysis
@@ -973,15 +977,15 @@ class MegadroughtAnalyzer:
                 current_consecutive = 0
 
         return {
-            'drought_period': f"{drought_start}-{drought_end}",
-            'mean_precipitation_mm': mean_prcp,
-            'baseline_mean_mm': self.baseline_mean,
-            'deficit_percent': deficit_percent,
-            'years_with_similar_or_worse': worse_years,
-            'total_years_in_record': len(self.annual_prcp),
-            'percentile_rank': (1 - worse_years / len(self.annual_prcp)) * 100,
-            'consecutive_deficit_years': consecutive_deficit_years,
-            'max_consecutive_historical': max_consecutive_historical,
-            'record_start_year': int(self.annual_prcp.index.min()),
-            'record_end_year': int(self.annual_prcp.index.max())
+            "drought_period": f"{drought_start}-{drought_end}",
+            "mean_precipitation_mm": mean_prcp,
+            "baseline_mean_mm": self.baseline_mean,
+            "deficit_percent": deficit_percent,
+            "years_with_similar_or_worse": worse_years,
+            "total_years_in_record": len(self.annual_prcp),
+            "percentile_rank": (1 - worse_years / len(self.annual_prcp)) * 100,
+            "consecutive_deficit_years": consecutive_deficit_years,
+            "max_consecutive_historical": max_consecutive_historical,
+            "record_start_year": int(self.annual_prcp.index.min()),
+            "record_end_year": int(self.annual_prcp.index.max()),
         }
