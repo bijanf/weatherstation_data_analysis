@@ -12,6 +12,7 @@ from datetime import datetime
 import requests
 from io import StringIO
 import warnings
+from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
@@ -190,6 +191,8 @@ class IranianDataFetcher:
     def _fetch_ghcn_data(self, start_year: int, end_year: int) -> Optional[pd.DataFrame]:
         """
         Fetch data from NOAA GHCN-Daily for the station.
+        
+        Checks local cache first, then downloads if missing.
 
         Args:
             start_year: Start year for data retrieval
@@ -202,23 +205,61 @@ class IranianDataFetcher:
         print(f"📍 Coordinates: {self.station_lat:.3f}°N, {self.station_lon:.3f}°E")
         print(f"📍 Elevation: {self.elevation}m")
         print(f"📍 GHCN ID: {self.station_id}")
-        print(f"\n📡 Fetching GHCN-Daily data from NOAA...")
 
-        # Construct the URL for this station's CSV file
-        station_file = f"{self.station_id}.csv"
-        url = self.GHCN_BASE_URL + station_file
+        # Ensure data directory exists
+        data_dir = Path("data/ghcn")
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Local cache file path
+        cache_file = data_dir / f"{self.station_id}.csv"
 
-        try:
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
+        data = None
+        
+        # Try loading from local cache
+        if cache_file.exists():
+            print(f"📂 Loading from local cache: {cache_file}")
+            try:
+                data = pd.read_csv(cache_file)
+                # Ensure DATE is parsed correctly
+                data['DATE'] = pd.to_datetime(data['DATE'])
+                print("✅ Loaded cached data successfully")
+            except Exception as e:
+                print(f"⚠️ Error reading cache: {e}. Will re-download.")
+        
+        # If not in cache or cache failed, download from NOAA
+        if data is None:
+            print(f"\n📡 Fetching GHCN-Daily data from NOAA...")
+            
+            # Construct the URL for this station's CSV file
+            station_file = f"{self.station_id}.csv"
+            url = self.GHCN_BASE_URL + station_file
 
-            # Parse CSV data
-            data = pd.read_csv(StringIO(response.text))
+            try:
+                response = requests.get(url, timeout=30)
+                response.raise_for_status()
 
-            # Convert DATE column to datetime
-            data['DATE'] = pd.to_datetime(data['DATE'])
+                # Parse CSV data
+                data = pd.read_csv(StringIO(response.text))
+                
+                # Save to local cache
+                data.to_csv(cache_file, index=False)
+                print(f"💾 Saved data to cache: {cache_file}")
 
-            # Filter by year range
+                # Convert DATE column to datetime
+                data['DATE'] = pd.to_datetime(data['DATE'])
+
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Error fetching data from NOAA: {e}")
+                print(f"❌ URL attempted: {url}")
+                print("\n💡 Note: GHCN data access may be temporarily unavailable.")
+                print("   Alternative: Use local data or try again later.")
+                return None
+            except Exception as e:
+                print(f"❌ Error parsing data: {e}")
+                return None
+
+        # Filter by year range
+        if data is not None:
             data = data[
                 (data['DATE'].dt.year >= start_year) &
                 (data['DATE'].dt.year <= end_year)
@@ -227,20 +268,13 @@ class IranianDataFetcher:
             # Set DATE as index
             data.set_index('DATE', inplace=True)
 
-            print(f"✅ Successfully downloaded {len(data)} days of data")
-            print(f"📅 Date range: {data.index.min().date()} to {data.index.max().date()}")
+            print(f"✅ Successfully loaded {len(data)} days of data")
+            if not data.empty:
+                print(f"📅 Date range: {data.index.min().date()} to {data.index.max().date()}")
 
             return data
-
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Error fetching data from NOAA: {e}")
-            print(f"❌ URL attempted: {url}")
-            print("\n💡 Note: GHCN data access may be temporarily unavailable.")
-            print("   Alternative: Use local data or try again later.")
-            return None
-        except Exception as e:
-            print(f"❌ Error parsing data: {e}")
-            return None
+        
+        return None
 
     def fetch_precipitation_data(
         self,
