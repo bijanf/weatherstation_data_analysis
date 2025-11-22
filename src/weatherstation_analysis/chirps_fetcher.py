@@ -15,14 +15,16 @@ Data source: https://data.chc.ucsb.edu/products/CHIRPS-2.0/
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-try:
+if TYPE_CHECKING:
     import xarray as xr
 
+try:
+    import xarray
     HAS_XARRAY = True
 except ImportError:
     HAS_XARRAY = False
@@ -139,7 +141,7 @@ class CHIRPSFetcher:
 
     def fetch_monthly(
         self, start_year: int = 1981, end_year: int = 2025
-    ) -> Optional[xr.Dataset]:
+    ) -> Optional["xr.Dataset"]:
         """
         Fetch monthly CHIRPS data for Iran by downloading GeoTIFF files.
 
@@ -247,7 +249,7 @@ class CHIRPSFetcher:
         return self._dataset
 
     def extract_regional_means(
-        self, dataset: Optional[xr.Dataset] = None
+        self, dataset: Optional["xr.Dataset"] = None
     ) -> pd.DataFrame:
         """
         Extract mean precipitation for each defined region.
@@ -289,7 +291,7 @@ class CHIRPSFetcher:
         return pd.concat(results, ignore_index=True)
 
     def extract_station_pixels(
-        self, dataset: Optional[xr.Dataset] = None
+        self, dataset: Optional["xr.Dataset"] = None
     ) -> pd.DataFrame:
         """
         Extract CHIRPS values at station locations for validation.
@@ -326,8 +328,8 @@ class CHIRPSFetcher:
         return pd.concat(results, ignore_index=True)
 
     def calculate_annual_totals(
-        self, dataset: Optional[xr.Dataset] = None
-    ) -> xr.Dataset:
+        self, dataset: Optional["xr.Dataset"] = None
+    ) -> "xr.Dataset":
         """
         Calculate annual precipitation totals.
 
@@ -350,10 +352,10 @@ class CHIRPSFetcher:
 
     def calculate_anomalies(
         self,
-        dataset: Optional[xr.Dataset] = None,
+        dataset: Optional["xr.Dataset"] = None,
         baseline_start: int = 1981,
         baseline_end: int = 2010,
-    ) -> xr.Dataset:
+    ) -> "xr.Dataset":
         """
         Calculate precipitation anomalies relative to baseline period.
 
@@ -390,7 +392,7 @@ class CHIRPSFetcher:
         )
 
     def get_iran_national_timeseries(
-        self, dataset: Optional[xr.Dataset] = None
+        self, dataset: Optional["xr.Dataset"] = None
     ) -> pd.DataFrame:
         """
         Get national average precipitation time series.
