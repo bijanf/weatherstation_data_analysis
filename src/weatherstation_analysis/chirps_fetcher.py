@@ -15,7 +15,7 @@ Data source: https://data.chc.ucsb.edu/products/CHIRPS-2.0/
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -158,7 +158,6 @@ class CHIRPSFetcher:
         try:
             import rioxarray  # For reading GeoTIFFs
             import gzip
-            import tempfile
         except ImportError:
             logger.error("rioxarray required. Install: pip install rioxarray")
             return None
@@ -187,7 +186,8 @@ class CHIRPSFetcher:
                             response = requests.get(url, timeout=60)
                             if response.status_code != 200:
                                 logger.warning(
-                                    f"Could not download {filename}: {response.status_code}"
+                                    f"Could not download {filename}: "
+                                    f"{response.status_code}"
                                 )
                                 continue
                             with open(local_gz, "wb") as f:

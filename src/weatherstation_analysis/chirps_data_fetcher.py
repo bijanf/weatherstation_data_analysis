@@ -48,7 +48,8 @@ class CHIRPSDataFetcher:
             or None if data fetching fails.
         """
         print(
-            f"🛰️  Fetching CHIRPS data for {self.location_name} ({self.latitude}, {self.longitude})..."
+            f"🛰️  Fetching CHIRPS data for {self.location_name} "
+            f"({self.latitude}, {self.longitude})..."
         )
         print(f"    Date range: {start_date} to {end_date}")
 
@@ -88,7 +89,8 @@ class CHIRPSDataFetcher:
             # if data is None, it means there was an error in the API call itself
             if data is None or "data" not in data:
                 print(
-                    "⚠️ No valid data or 'data' key found in the response from ClimateSERV API."
+                    "⚠️ No valid data or 'data' key found in the response "
+                    "from ClimateSERV API."
                 )
                 return None
 

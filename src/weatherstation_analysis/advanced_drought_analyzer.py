@@ -18,7 +18,6 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 from scipy.signal import find_peaks
-from scipy.ndimage import uniform_filter1d
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -55,7 +54,8 @@ class DroughtReturnPeriodAnalyzer:
         Returns:
             Dict with location (mu) and scale (beta) parameters
         """
-        # Use maximum deficit per year (for drought analysis, we want the minima inverted)
+        # Use maximum deficit per year
+        # (for drought analysis, we want the minima inverted)
         deficits = self.deficit_percent.values
 
         # Fit Gumbel distribution (for maxima - deficits are "maxima" of water shortage)
@@ -214,7 +214,8 @@ class CompoundEventAnalyzer:
 
         Args:
             precipitation_data: Daily precipitation data (index=date)
-            temperature_data: Daily temperature data (index=date, columns: tmax_celsius, tmin_celsius)
+            temperature_data: Daily temperature data (index=date,
+                              columns: tmax_celsius, tmin_celsius)
             baseline_start: Start year for baseline period
             baseline_end: End year for baseline period
         """
@@ -782,7 +783,8 @@ class WaveletDroughtAnalyzer:
             # Generate synthetic ENSO proxy (for demonstration)
             # In real application, use actual ENSO data
             print(
-                "Note: Using synthetic ENSO proxy. For publication, use actual ENSO index."
+                "Note: Using synthetic ENSO proxy. "
+                "For publication, use actual ENSO index."
             )
             np.random.seed(42)
             enso_index = pd.Series(
@@ -910,7 +912,8 @@ class MegadroughtAnalyzer:
             results["compound_events"] = {
                 "probabilities": compound_analyzer.calculate_joint_probability(),
                 "identified_events": compound_analyzer.identify_compound_events(),
-                "drought_period_temp": compound_analyzer.analyze_drought_period_temperature(
+                "drought_period_temp":
+                compound_analyzer.analyze_drought_period_temperature(
                     drought_start, drought_end
                 ),
             }

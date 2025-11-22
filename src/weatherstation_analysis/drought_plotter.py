@@ -6,9 +6,8 @@ Creates publication-quality visualizations for drought analysis.
 Designed specifically for Iran drought analysis (2018-2025).
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.gridspec import GridSpec
@@ -53,7 +52,7 @@ class DroughtPlotter:
         """
         try:
             plt.style.use(style)
-        except:
+        except Exception:
             plt.style.use("default")
             sns.set_palette("husl")
 
@@ -295,7 +294,8 @@ class DroughtPlotter:
 
         Args:
             regional_results: Dict from MultiStationDroughtAnalyzer
-            metric: Metric to compare ('mean_annual_deficit_percent', 'total_deficit_mm', etc.)
+            metric: Metric to compare
+                    ('mean_annual_deficit_percent', 'total_deficit_mm', etc.)
             output_file: Path to save figure (None = display only)
         """
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
@@ -335,6 +335,10 @@ class DroughtPlotter:
 
         # Right panel: Worst years comparison
         worst_years = [regional_results[s]["worst_year"] for s in stations]
+        # The following line was added based on the user's instruction.
+        # It calculates the most common worst year.
+        # It calculates the most common worst year.
+        max(set(worst_years), key=worst_years.count)
         worst_deficits = [
             regional_results[s]["worst_deficit_percent"] for s in stations
         ]

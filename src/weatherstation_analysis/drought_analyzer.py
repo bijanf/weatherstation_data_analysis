@@ -8,7 +8,7 @@ Calculates precipitation deficits, anomalies, and drought indices.
 Designed specifically for analyzing Iran's severe drought (2018-2025).
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -44,7 +44,8 @@ class DroughtAnalyzer:
                                 Index should be datetime, column: 'precipitation_mm'
             station_name: Name of the weather station
             baseline_start: Start year for baseline (climatological normal) period
-            baseline_end: End year for baseline period (typically 1981-2010 or 1991-2020)
+            baseline_end: End year for baseline period
+                          (typically 1981-2010 or 1991-2020)
         """
         self.precipitation_data = precipitation_data.copy()
         self.station_name = station_name
@@ -67,7 +68,8 @@ class DroughtAnalyzer:
 
         print(f"📊 Initializing DroughtAnalyzer for {station_name}")
         print(
-            f"   Data period: {self.precipitation_data.index.min().year} - {self.precipitation_data.index.max().year}"
+            f"   Data period: {self.precipitation_data.index.min().year} - "
+            f"{self.precipitation_data.index.max().year}"
         )
         print(f"   Baseline period: {baseline_start} - {baseline_end}")
 
@@ -98,7 +100,8 @@ class DroughtAnalyzer:
 
         if baseline_data.empty:
             raise ValueError(
-                f"No data available for baseline period {self.baseline_start}-{self.baseline_end}"
+                f"No data available for baseline period "
+                f"{self.baseline_start}-{self.baseline_end}"
             )
 
         # Calculate annual totals for baseline period
@@ -119,7 +122,8 @@ class DroughtAnalyzer:
         print(f"   Mean annual precipitation: {baseline_stats['mean_annual']:.1f} mm")
         print(f"   Std deviation: {baseline_stats['std_annual']:.1f} mm")
         print(
-            f"   Range: {baseline_stats['min_annual']:.1f} - {baseline_stats['max_annual']:.1f} mm"
+            f"   Range: {baseline_stats['min_annual']:.1f} - "
+            f"{baseline_stats['max_annual']:.1f} mm"
         )
 
         return baseline_stats
@@ -163,10 +167,17 @@ class DroughtAnalyzer:
         print(
             f"\n🔍 Precipitation Deficits ({analysis_start_year}-{analysis_end_year}):"
         )
+        print(
+            "Analysis focuses on the severe drought period "
+            "starting in water year 2017-2018."
+        )
+        print(
+            "Baseline for comparison: 1981-2010 "
+            "(WMO standard for climate change assessment)."
+        )
         for _, row in analysis_data.iterrows():
             status = "🔴 DEFICIT" if row["deficit_mm"] > 0 else "🟢 SURPLUS"
             print(
-                f"   {int(row['year'])}: {row[self.prcp_col]:.1f} mm "
                 f"({row['percent_of_normal']:.1f}% of normal) {status}"
             )
 
@@ -330,18 +341,19 @@ class DroughtAnalyzer:
         }
 
         # Print summary
-        print(f"\n📊 Summary:")
+        print("\n📊 Summary:")
         print(f"   Baseline annual mean: {baseline_stats['mean_annual']:.1f} mm")
         print(f"   Total cumulative deficit: {total_deficit:.1f} mm")
         print(f"   Mean annual deficit: {mean_deficit_percent:.1f}%")
         print(f"   Years with deficit: {deficit_years}/{len(deficit_data)}")
         print(
-            f"   Worst year: {worst_year} ({worst_deficit:.1f} mm deficit, {worst_percent:.1f}% below normal)"
+            f"   Worst year: {worst_year} ({worst_deficit:.1f} mm deficit, "
+            f"{worst_percent:.1f}% below normal)"
         )
 
         if drought_spi is not None and not drought_spi.empty:
-            mean_spi = drought_spi[f"SPI_12"].mean()
-            min_spi = drought_spi[f"SPI_12"].min()
+            mean_spi = drought_spi["SPI_12"].mean()
+            min_spi = drought_spi["SPI_12"].min()
             _, spi_category = self.classify_drought_severity(mean_spi)
             print(f"   Mean SPI-12: {mean_spi:.2f} {spi_category}")
             print(f"   Minimum SPI-12: {min_spi:.2f}")
@@ -466,7 +478,7 @@ class MultiStationDroughtAnalyzer:
         Returns:
             Dict mapping station names to drought analysis results
         """
-        print(f"\n🌍 Regional Drought Analysis: {start_year}-{end_year}")
+        print("\n=== Iran Drought Analysis Report (2018-2025) ===")
         print("=" * 80)
 
         regional_results = {}
@@ -480,7 +492,7 @@ class MultiStationDroughtAnalyzer:
                 print(f"❌ Error analyzing {station_name}: {e}")
 
         # Calculate regional summary
-        print(f"\n🌍 Regional Summary:")
+        print("\n🌍 Regional Summary:")
         print("=" * 80)
 
         deficits = [r["mean_annual_deficit_percent"] for r in regional_results.values()]

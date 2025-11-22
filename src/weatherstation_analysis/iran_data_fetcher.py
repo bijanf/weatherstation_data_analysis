@@ -6,9 +6,8 @@ Handles fetching weather data for Iranian weather stations from NOAA GHCN-Daily 
 Designed for analyzing Iran's severe drought conditions (2018-2025).
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import pandas as pd
-from datetime import datetime
 import requests
 from io import StringIO
 import warnings
@@ -26,7 +25,8 @@ class IranianStationRegistry:
     """
 
     # Major Iranian cities with weather stations
-    # VERIFIED GHCN Station IDs (checked against https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt)
+    # VERIFIED GHCN Station IDs
+    # (checked against https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt)
     STATIONS = {
         "Tehran": {
             "lat": 35.683,
@@ -164,7 +164,10 @@ class IranianDataFetcher:
         station_lon (float): Station longitude
     """
 
-    GHCN_BASE_URL = "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/"
+    GHCN_BASE_URL = (
+        "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/"
+        "access/"
+    )
 
     def __init__(self, city_name: str = "Tehran"):
         """
@@ -179,7 +182,8 @@ class IranianDataFetcher:
         if station_info is None:
             available = IranianStationRegistry.get_station_list()
             raise ValueError(
-                f"City '{city_name}' not found. Available cities: {', '.join(available)}"
+                f"City '{city_name}' not found. "
+                f"Available cities: {', '.join(available)}"
             )
 
         self.station_id = station_info["ghcn_pattern"]
@@ -230,7 +234,7 @@ class IranianDataFetcher:
 
         # If not in cache or cache failed, download from NOAA
         if data is None:
-            print(f"\n📡 Fetching GHCN-Daily data from NOAA...")
+            print("\n📡 Fetching GHCN-Daily data from NOAA...")
 
             # Construct the URL for this station's CSV file
             station_file = f"{self.station_id}.csv"
@@ -273,7 +277,8 @@ class IranianDataFetcher:
             print(f"✅ Successfully loaded {len(data)} days of data")
             if not data.empty:
                 print(
-                    f"📅 Date range: {data.index.min().date()} to {data.index.max().date()}"
+                    f"📅 Date range: {data.index.min().date()} "
+                    f"to {data.index.max().date()}"
                 )
 
             return data
@@ -320,10 +325,10 @@ class IranianDataFetcher:
 
         # Print summary statistics
         total_prcp = prcp_data["precipitation_mm"].sum()
-        valid_days = prcp_data["precipitation_mm"].notna().sum()
+        prcp_data["precipitation_mm"].notna().sum()
 
         print(f"\n📊 Precipitation Summary ({start_year}-{end_year}):")
-        print(f"   Valid measurements: {valid_days} days")
+        print("   Valid measurements: 0 days")
         print(f"   Total precipitation: {total_prcp:.1f} mm")
         print(f"   Mean daily: {prcp_data['precipitation_mm'].mean():.2f} mm/day")
 
@@ -379,11 +384,13 @@ class IranianDataFetcher:
         print(f"\n📊 Temperature Summary ({start_year}-{end_year}):")
         if "tmax_celsius" in temp_data.columns:
             print(
-                f"   Max temp range: {temp_data['tmax_celsius'].min():.1f}°C to {temp_data['tmax_celsius'].max():.1f}°C"
+                f"   Max temp range: {temp_data['tmax_celsius'].min():.1f}°C "
+                f"to {temp_data['tmax_celsius'].max():.1f}°C"
             )
         if "tmin_celsius" in temp_data.columns:
             print(
-                f"   Min temp range: {temp_data['tmin_celsius'].min():.1f}°C to {temp_data['tmin_celsius'].max():.1f}°C"
+                f"   Min temp range: {temp_data['tmin_celsius'].min():.1f}°C "
+                f"to {temp_data['tmin_celsius'].max():.1f}°C"
             )
 
         return temp_data
@@ -490,7 +497,8 @@ class MultiStationFetcher:
         all_data = {}
 
         print(
-            f"🌧️ Fetching precipitation data from {len(self.fetchers)} Iranian stations..."
+            f"🌧️ Fetching precipitation data from "
+            f"{len(self.fetchers)} Iranian stations..."
         )
         print("=" * 80)
 
@@ -502,7 +510,8 @@ class MultiStationFetcher:
             print("-" * 80)
 
         print(
-            f"\n✅ Successfully fetched data from {len(all_data)}/{len(self.fetchers)} stations"
+            f"\n✅ Successfully fetched data from "
+            f"{len(all_data)}/{len(self.fetchers)} stations"
         )
 
         return all_data

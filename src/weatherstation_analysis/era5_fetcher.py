@@ -15,7 +15,7 @@ Requires CDS API key in ~/.cdsapirc
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -97,7 +97,8 @@ class ERA5Fetcher:
         Fetch monthly ERA5 data for Iran.
 
         Args:
-            variables: List of variable names ('snow', 'temperature', 'precipitation', 'evaporation')
+            variables: List of variable names
+                       ('snow', 'temperature', 'precipitation', 'evaporation')
             start_year: First year
             end_year: Last year
 
@@ -366,7 +367,7 @@ class ERA5Fetcher:
 def test_era5_connection() -> bool:
     """Test if ERA5 CDS API is configured and working."""
     try:
-        client = cdsapi.Client()
+        cdsapi.Client()
         logger.info("CDS API connection successful")
         return True
     except Exception as e:

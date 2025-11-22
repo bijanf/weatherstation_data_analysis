@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.patheffects as patheffects
 from matplotlib.gridspec import GridSpec
-from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 import seaborn as sns
 from scipy import stats
@@ -67,7 +66,7 @@ class AdvancedDroughtPlotter:
         """Initialize plotter with style."""
         try:
             plt.style.use(style)
-        except:
+        except Exception:
             plt.style.use("default")
         sns.set_palette("husl")
 
@@ -197,7 +196,7 @@ class AdvancedDroughtPlotter:
             for y in top_droughts["year"]
         ]
 
-        bars = ax2.barh(
+        ax2.barh(
             range(len(top_droughts)),
             top_droughts["deficit_percent"],
             color=colors,
@@ -247,7 +246,8 @@ class AdvancedDroughtPlotter:
         Plot compound drought-heat event analysis.
 
         Args:
-            annual_anomalies: DataFrame with annual precipitation and temperature anomalies
+            annual_anomalies: DataFrame with annual precipitation
+                              and temperature anomalies
             probability_stats: Dict with joint/conditional probabilities
             drought_period: Tuple of (start_year, end_year)
             station_name: Name of station
@@ -271,7 +271,7 @@ class AdvancedDroughtPlotter:
             else:
                 colors.append(self.COLORS["normal"])
 
-        scatter = ax1.scatter(
+        ax1.scatter(
             annual_anomalies["prcp_anomaly_std"],
             annual_anomalies["temp_anomaly_std"],
             c=colors,
@@ -385,22 +385,25 @@ class AdvancedDroughtPlotter:
         ax2 = fig.add_subplot(gs[0, 2])
         ax2.axis("off")
 
+        dependence_text = (
+            "Events MORE likely together"
+            if probability_stats["dependence_ratio"] > 1
+            else "Events LESS likely together"
+        )
+
         prob_text = f"""
-COMPOUND EVENT STATISTICS
-{station_name}
-{'─' * 35}
+COMPOUND DROUGHT-HEAT EVENTS
+{drought_period[0]}-{drought_period[1]}
 
-MARGINAL PROBABILITIES
-  P(Drought):     {probability_stats['p_drought']*100:.1f}%
-  P(Heat):        {probability_stats['p_heat']*100:.1f}%
-
-JOINT PROBABILITIES
-  P(Compound) observed:    {probability_stats['p_compound_observed']*100:.1f}%
-  P(Compound) if independent: {probability_stats['p_compound_independent']*100:.1f}%
+PROBABILITIES
+  P(Drought):         {probability_stats['p_drought']*100:.1f}%
+  P(Heat):            {probability_stats['p_heat']*100:.1f}%
+  P(Compound):        {probability_stats['p_compound_observed']*100:.1f}%
+  (Expected if indep: {probability_stats['p_compound_independent']*100:.1f}%)
 
 DEPENDENCE
   Ratio: {probability_stats['dependence_ratio']:.2f}x
-  {"Events MORE likely together" if probability_stats['dependence_ratio'] > 1 else "Events LESS likely together"}
+  {dependence_text}
 
 CONDITIONAL PROBABILITIES
   P(Heat | Drought):  {probability_stats['p_heat_given_drought']*100:.1f}%
@@ -429,7 +432,7 @@ COUNTS ({probability_stats['n_years_total']} years)
         width = 0.4
 
         # Precipitation bars (inverted so deficit is up)
-        prcp_bars = ax3.bar(
+        ax3.bar(
             years - width / 2,
             -annual_anomalies["prcp_anomaly_std"],  # Invert so deficit is positive
             width,
@@ -439,7 +442,7 @@ COUNTS ({probability_stats['n_years_total']} years)
         )
 
         # Temperature bars
-        temp_bars = ax3.bar(
+        ax3.bar(
             years + width / 2,
             annual_anomalies["temp_anomaly_std"],
             width,
@@ -454,7 +457,7 @@ COUNTS ({probability_stats['n_years_total']} years)
             drought_period[1] + 0.5,
             alpha=0.2,
             color="red",
-            label=f"Drought period",
+            label="Drought period",
         )
 
         # Mark compound years
@@ -558,7 +561,8 @@ COUNTS ({probability_stats['n_years_total']} years)
         ax1.set_xlabel("Longitude (°E)", fontweight="bold")
         ax1.set_ylabel("Latitude (°N)", fontweight="bold")
         ax1.set_title(
-            f"Spatial Distribution of Drought Severity\n{drought_period[0]}-{drought_period[1]}",
+            f"Spatial Distribution of Drought Severity\n"
+            f"{drought_period[0]}-{drought_period[1]}",
             fontweight="bold",
             fontsize=13,
         )
@@ -582,7 +586,7 @@ COUNTS ({probability_stats['n_years_total']} years)
 
         colors = [cmap(norm(v)) for v in sorted_values]
 
-        bars = ax2.barh(
+        ax2.barh(
             range(len(sorted_stations)),
             sorted_values,
             color=colors,
@@ -606,7 +610,7 @@ COUNTS ({probability_stats['n_years_total']} years)
 
         # Add statistics
         mean_val = np.mean(values)
-        std_val = np.std(values)
+        np.std(values)
         ax2.axvline(
             mean_val,
             color="red",
@@ -777,7 +781,8 @@ COUNTS ({probability_stats['n_years_total']} years)
         ax2.text(
             0.5,
             max(means) * 0.5,
-            f'Change: {change_pct:+.1f}%\np-value: {change_point_results["p_value"]:.4f}',
+            f'Change: {change_pct:+.1f}%\n'
+            f'p-value: {change_point_results["p_value"]:.4f}',
             ha="center",
             fontsize=11,
             fontweight="bold",
@@ -838,7 +843,7 @@ COUNTS ({probability_stats['n_years_total']} years)
         x = np.arange(len(decades))
         width = 0.35
 
-        bars1 = ax4.bar(
+        ax4.bar(
             x - width / 2,
             means,
             width,
@@ -852,7 +857,7 @@ COUNTS ({probability_stats['n_years_total']} years)
         ax4.tick_params(axis="y", labelcolor=self.COLORS["primary"])
 
         ax4b = ax4.twinx()
-        bars2 = ax4b.bar(
+        ax4b.bar(
             x + width / 2,
             drought_freq,
             width,
@@ -943,7 +948,9 @@ COUNTS ({probability_stats['n_years_total']} years)
         ax1.set_xlabel("Year", fontweight="bold")
         ax1.set_ylabel("Annual Precipitation (mm)", fontweight="bold")
         ax1.set_title(
-            f'Full Historical Record ({historical_context["record_start_year"]}-{historical_context["record_end_year"]})',
+            f'Full Historical Record '
+            f'({historical_context["record_start_year"]}-'
+            f'{historical_context["record_end_year"]})',
             fontweight="bold",
             fontsize=13,
         )
@@ -1036,7 +1043,8 @@ CURRENT DROUGHT ({historical_context['drought_period']})
   Consecutive years:   {historical_context['consecutive_deficit_years']}
 
 HISTORICAL COMPARISON
-  Record period:       {historical_context['record_start_year']}-{historical_context['record_end_year']}
+  Record period:       {historical_context['record_start_year']}-
+                       {historical_context['record_end_year']}
   Total years:         {historical_context['total_years_in_record']}
 
   Similar/worse years: {historical_context['years_with_similar_or_worse']}
