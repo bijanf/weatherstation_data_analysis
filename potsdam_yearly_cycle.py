@@ -38,6 +38,10 @@ STATIONS = {
         "id": "10379",
         "label": "Potsdam Secular Station",
         "point": Point(52.3833, 13.0667, 81),
+        "note": (
+            "Obwohl die Station auf dem Telegrafenberg in einem kleinen "
+            "Wäldchen liegt, ist es hier statistisch wärmer als üblich!"
+        ),
     },
     "berlin-dahlem": {
         "id": "10381",
@@ -322,6 +326,11 @@ def make_plot(key: str, year: int | None = None) -> str:
               handletextpad=0.6, borderpad=0.4)
 
     _draw_table(fig, table)
+
+    # Optional station-specific footnote (e.g. the Potsdam siting caveat)
+    if station.get("note"):
+        fig.text(PLOT_LEFT, 0.022, station["note"], ha="left", va="center",
+                 fontsize=8, style="italic", color="#666666")
 
     out = f"{OUTPUT_DIR}/yearly_cycle_{key}_{year}.png"
     fig.savefig(out, dpi=200)
