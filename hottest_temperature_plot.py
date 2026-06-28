@@ -1,388 +1,390 @@
 #!/usr/bin/env python3
 """
-Hottest Temperature Plot for Potsdam Station
-Shows the highest temperature recorded each year from the Säkularstation.
+Hottest / Coldest Temperature Analysis for the Potsdam Säkularstation.
+
+Fetches the full daily temperature record of the Potsdam Säkularstation from
+Meteostat (backed by DWD) and produces Instagram-style annual-extreme plots
+that always extend up to *today*.
+
+The current (incomplete) year is handled dynamically via ``date.today()`` and
+shown as a separate "so far" marker on the hottest-temperature plot, so the
+record never goes stale and never needs a hardcoded cutoff year.
+
+Note: this module targets the Meteostat **2.x** functional API
+(``daily`` / ``Point`` / ``Parameter`` / ``stations.nearby``), which replaced
+the 1.x ``Stations`` / ``Daily`` classes.
 """
 
-import pandas as pd
+from __future__ import annotations
+
+from datetime import date, datetime
+
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime, date
-from meteostat import Stations, Daily
-import warnings
-warnings.filterwarnings('ignore')
+import pandas as pd
 
-def get_real_temperature_data():
-    """
-    Get REAL daily temperature data for Potsdam station using Meteostat.
-    """
-    print("🌡️ Fetching REAL daily temperature data for Potsdam...")
-    
-    # Get the station
-    stations = Stations()
-    stations = stations.nearby(52.3833, 13.0667)  # Potsdam Säkularstation coordinates
-    station = stations.fetch(1)
-    
-    if station.empty:
-        print("❌ No station found")
-        return None
-    
-    station_id = station.index[0]
-    station_name = station.loc[station_id, 'name']
-    print(f"📍 Station: {station_name}")
-    print(f"📍 Coordinates: {station.loc[station_id, 'latitude']:.4f}°N, {station.loc[station_id, 'longitude']:.4f}°E")
-    
-    # Get real daily data for all available years (100+ years)
-    years_to_analyze = list(range(1890, 2026))  # Try to get as much historical data as possible
-    all_data = {}
-    
-    for year in years_to_analyze:
-        print(f"📡 Downloading real temperature data for {year}...")
-        
-        start = datetime(year, 1, 1)
-        # For 2025, only get data up to current date
-        if year == 2025:
-            end = datetime(2025, 7, 2)  # Up to July 2nd
-        else:
-            end = datetime(year, 12, 31)
-        
-        try:
-            data = Daily(station_id, start, end)
-            data = data.fetch()
-            
-            if not data.empty and 'tmax' in data.columns:
-                # Calculate expected days for the year
-                if year == 2025:
-                    # For 2025, calculate up to July 2nd
-                    expected_days = 183  # Days from Jan 1 to July 2
-                else:
-                    # Full year: check if leap year
-                    expected_days = 366 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 365
-                
-                # Count actual non-null temperature data points
-                non_null_data = data['tmax'].dropna()
-                actual_days = len(non_null_data)
-                coverage_percentage = (actual_days / expected_days) * 100
-                
-                # Only include years with at least 80% coverage (or 2025 regardless of coverage)
-                if year == 2025 or coverage_percentage >= 80.0:
-                    # Use real maximum temperature data
-                    daily_tmax = data['tmax']
-                    all_data[year] = daily_tmax
-                    max_temp = daily_tmax.max()
-                    status = "(partial year)" if year == 2025 else ""
-                    print(f"✅ {year}: {actual_days}/{expected_days} days, max temp: {max_temp:.1f}°C, coverage: {coverage_percentage:.1f}% {status}")
-                else:
-                    print(f"❌ {year}: Insufficient coverage ({actual_days}/{expected_days} days = {coverage_percentage:.1f}%)")
-            else:
-                print(f"❌ {year}: No temperature data available")
-                
-        except Exception as e:
-            print(f"❌ {year}: Error downloading data - {e}")
-    
-    if not all_data:
-        print("❌ No real data could be retrieved")
-        return None
-        
-    print(f"\n✅ Successfully retrieved real temperature data for {len(all_data)} years")
-    return all_data
+import meteostat
+from meteostat import Parameter, Point, daily
 
-def create_hottest_temperature_plot(all_data):
-    """
-    Create a visually appealing time series plot for Instagram:
-    - Trend line in black
-    - Lines in grey
-    - Dots in red
-    - No grid
-    - Clean, modern style
-    """
-    if not all_data:
-        print("❌ No data to plot")
-        return None
+# The full record spans ~130 years; Meteostat 2.x blocks daily requests longer
+# than 30 years unless this guard is lifted.
+meteostat.config.block_large_requests = False
 
-    plt.style.use('default')
+# Potsdam Säkularstation (lat, lon, elevation in m). Meteostat station id 10379.
+POTSDAM = Point(52.3833, 13.0667, 81)
+START_YEAR = 1893  # first full year of the Säkularstation record
+MIN_COVERAGE = 80.0  # percent of valid days required to count a complete year
+OUTPUT_DIR = "plots"
+
+# Instagram-style palette
+GREY = "#888888"
+RED = "#D7263D"
+BLUE = "#1B6CA8"
+ORANGE = "#F18F01"  # current partial year marker
+
+
+def resolve_station() -> str:
+    """Return the Meteostat station id closest to the Säkularstation."""
+    near = meteostat.stations.nearby(POTSDAM, radius=50000, limit=1)
+    if near.empty:
+        raise RuntimeError("No Meteostat station found near Potsdam")
+    sid = near.index[0]
+    print(
+        f"📍 Station: {near.loc[sid, 'name']} ({sid}) @ "
+        f"{near.loc[sid, 'latitude']:.4f}°N, {near.loc[sid, 'longitude']:.4f}°E"
+    )
+    return sid
+
+
+def fetch_daily_extremes() -> tuple[pd.DataFrame, date]:
+    """Fetch the full daily tmax/tmin record up to today in a single request."""
+    today = date.today()
+    sid = resolve_station()
+    print(f"📡 Downloading daily tmax/tmin {START_YEAR}-01-01 … {today} …")
+    df = daily(
+        sid,
+        datetime(START_YEAR, 1, 1),
+        datetime(today.year, today.month, today.day),
+        parameters=[Parameter.TMAX, Parameter.TMIN],
+    ).fetch()
+    if df.empty:
+        raise RuntimeError("Meteostat returned no data")
+    df.index = pd.to_datetime(df.index)
+    print(f"✅ {len(df)} daily records, latest = {df.index.max().date()}")
+    return df, today
+
+
+def _expected_days(year: int) -> int:
+    """Number of days in *year* (handles leap years)."""
+    is_leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    return 366 if is_leap else 365
+
+
+def annual_aggregate(
+    daily_col: pd.Series, today: date, agg: str
+) -> tuple[np.ndarray, np.ndarray, float | None]:
+    """Aggregate a daily column to one value per year applying the coverage rule.
+
+    Complete years (year < current year) are kept only when they meet
+    ``MIN_COVERAGE``. The current, still-incomplete year is returned separately
+    and never gated on coverage.
+
+    Args:
+        daily_col: Daily ``tmax`` or ``tmin`` series indexed by date.
+        today: Reference "today" used to identify the current partial year.
+        agg: Either ``"max"`` or ``"min"``.
+
+    Returns:
+        ``(years, values, current_year_value)`` where ``current_year_value`` is
+        ``None`` when the current year has no data yet.
+    """
+    series = daily_col.dropna()
+    years: list[int] = []
+    values: list[float] = []
+    current_value: float | None = None
+
+    for year, group in series.groupby(series.index.year):
+        year_value = group.max() if agg == "max" else group.min()
+        if year == today.year:
+            current_value = float(year_value)
+            continue
+        coverage = len(group) / _expected_days(year) * 100
+        if coverage >= MIN_COVERAGE:
+            years.append(int(year))
+            values.append(float(year_value))
+
+    return np.array(years), np.array(values), current_value
+
+
+def annual_threshold_count(
+    daily_col: pd.Series, today: date, predicate
+) -> tuple[np.ndarray, np.ndarray]:
+    """Count days per *complete* year where ``predicate(value)`` is True.
+
+    The current partial year is excluded because a partial count is not
+    comparable with full-year counts.
+    """
+    series = daily_col.dropna()
+    years: list[int] = []
+    counts: list[int] = []
+    for year, group in series.groupby(series.index.year):
+        if year == today.year:
+            continue
+        coverage = len(group) / _expected_days(year) * 100
+        if coverage >= MIN_COVERAGE:
+            years.append(int(year))
+            counts.append(int(predicate(group).sum()))
+    return np.array(years), np.array(counts)
+
+
+def _cubic_trend(years: np.ndarray, values: np.ndarray):
+    """Return (trend_years, trend_values) for a 3rd-degree fit.
+
+    Years are mean-centred before fitting to keep the Vandermonde matrix
+    well-conditioned (avoids numpy's RankWarning on raw four-digit years).
+    """
+    centre = years.mean()
+    coeffs = np.polyfit(years - centre, values, 3)
+    poly = np.poly1d(coeffs)
+    trend_years = np.linspace(years.min(), years.max(), 300)
+    return trend_years, poly(trend_years - centre)
+
+
+def _style_axes(ax, xlabel: str, ylabel: str, title: str, today: date) -> None:
+    """Apply the shared clean, modern, grid-free styling."""
+    ax.set_xlabel(xlabel, fontsize=18, fontweight="bold", labelpad=15)
+    ax.set_ylabel(ylabel, fontsize=18, fontweight="bold", labelpad=15)
+    ax.set_title(title, fontsize=22, fontweight="bold", pad=25)
+    ax.tick_params(axis="both", labelsize=14, length=6, width=2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_linewidth(2)
+    ax.spines["bottom"].set_linewidth(2)
+    ax.grid(False)
+    ax.text(
+        0.99,
+        0.01,
+        f"Data: Meteostat/DWD\nUpdated: {today.strftime('%d.%m.%Y')}",
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=12,
+        color="#444444",
+        alpha=0.8,
+    )
+
+
+def create_hottest_temperature_plot(
+    years: np.ndarray,
+    max_temps: np.ndarray,
+    today: date,
+    current_year_max: float | None = None,
+) -> plt.Figure:
+    """Plot the yearly maximum temperature with a cubic trend and today's record."""
+    plt.style.use("default")
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 
-    # Extract yearly maximum temperatures (exclude 2025)
-    yearly_max_temps = {}
-    for year, daily_data in all_data.items():
-        if year != 2025:  # Exclude 2025
-            max_temp = daily_data.max()
-            if pd.notna(max_temp):
-                yearly_max_temps[year] = max_temp
+    trend_years, trend_line = _cubic_trend(years, max_temps)
+    ax.plot(years, max_temps, "-", color=GREY, linewidth=2, alpha=0.7, zorder=1)
+    ax.scatter(years, max_temps, color=RED, s=40, zorder=2)
+    ax.plot(
+        trend_years, trend_line, "-", color="black", linewidth=3, alpha=0.9, zorder=3
+    )
 
-    years = np.array(sorted(yearly_max_temps.keys()))
-    max_temps = np.array([yearly_max_temps[year] for year in years])
-
-    # Trend line (nonlinear, 3rd degree polynomial)
-    z = np.polyfit(years, max_temps, 3)
-    p = np.poly1d(z)
-    trend_years = np.linspace(years.min(), years.max(), 300)
-    trend_line = p(trend_years)
-
-    # Plot the grey line
-    ax.plot(years, max_temps, '-', color='#888888', linewidth=2, alpha=0.7, zorder=1)
-    # Plot the red dots
-    ax.scatter(years, max_temps, color='#D7263D', s=40, zorder=2)
-    # Plot the black trend line
-    ax.plot(trend_years, trend_line, '-', color='black', linewidth=3, alpha=0.9, zorder=3)
-
-    # Highlight the hottest year
     overall_max = max_temps.max()
     overall_max_year = years[max_temps.argmax()]
-    ax.scatter([overall_max_year], [overall_max], color='black', s=100, edgecolor='white', linewidth=2, zorder=4)
+    ax.scatter(
+        [overall_max_year],
+        [overall_max],
+        color="black",
+        s=100,
+        edgecolor="white",
+        linewidth=2,
+        zorder=4,
+    )
+    ax.annotate(
+        f"{overall_max:.1f}°C",
+        xy=(overall_max_year, overall_max),
+        xytext=(overall_max_year + 5, overall_max),
+        fontsize=16,
+        fontweight="bold",
+        color="black",
+        arrowprops=dict(facecolor="black", arrowstyle="->", lw=2, alpha=0.7),
+        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", lw=1, alpha=0.8),
+    )
 
-    # Clean, modern style
-    ax.set_xlabel('Year', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_ylabel('Maximum Temperature (°C)', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_title(f'Hottest Temperature Each Year\nPotsdam Säkularstation, Germany ({years.min()}-{years.max()})', fontsize=22, fontweight='bold', pad=25)
-    ax.set_ylim(max_temps.min() - 2, max_temps.max() + 2)
-    ax.tick_params(axis='both', labelsize=14, length=6, width=2)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_linewidth(2)
-    ax.spines['bottom'].set_linewidth(2)
+    y_top = max_temps.max()
+    # Show the current, still-incomplete year as a distinct "so far" marker.
+    if current_year_max is not None:
+        ax.scatter(
+            [today.year],
+            [current_year_max],
+            marker="*",
+            color=ORANGE,
+            s=320,
+            edgecolor="black",
+            linewidth=1.2,
+            zorder=5,
+        )
+        ax.annotate(
+            f"{today.year} so far:\n{current_year_max:.1f}°C",
+            xy=(today.year, current_year_max),
+            xytext=(today.year - 28, current_year_max),
+            fontsize=13,
+            fontweight="bold",
+            color=ORANGE,
+            ha="right",
+            va="center",
+            arrowprops=dict(facecolor=ORANGE, arrowstyle="->", lw=2, alpha=0.8),
+        )
+        y_top = max(y_top, current_year_max)
 
-    # Remove grid
-    ax.grid(False)
-
-    # No legend
-
-    # Annotation for hottest year
-    ax.annotate(f'{overall_max:.1f}°C',
-                xy=(overall_max_year, overall_max),
-                xytext=(overall_max_year+5, overall_max),
-                fontsize=16, fontweight='bold', color='black',
-                arrowprops=dict(facecolor='black', arrowstyle='->', lw=2, alpha=0.7),
-                bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='black', lw=1, alpha=0.8))
-
-    # Data source and update date
-    today = date.today()
-    ax.text(0.99, 0.01, f'Data: Meteostat/DWD\nUpdated: {today.strftime("%d.%m.%Y")}',
-            transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
+    last_year = today.year if current_year_max is not None else years.max()
+    ax.set_xlim(years.min() - 2, last_year + 4)
+    ax.set_ylim(max_temps.min() - 2, y_top + 2)
+    _style_axes(
+        ax,
+        "Year",
+        "Maximum Temperature (°C)",
+        f"Hottest Temperature Each Year\nPotsdam Säkularstation, Germany "
+        f"({years.min()}-{last_year})",
+        today,
+    )
 
     plt.tight_layout()
-    plt.savefig('plots/hottest_temperature_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'plots/hottest_temperature_plot.png'")
+    plt.savefig(
+        f"{OUTPUT_DIR}/hottest_temperature_plot.png", dpi=300, bbox_inches="tight"
+    )
+    print(f"📊 Saved {OUTPUT_DIR}/hottest_temperature_plot.png")
     return fig
 
-def create_coldest_temperature_plot(all_data):
-    """
-    Create a visually appealing time series plot for Instagram:
-    - Trend line in black
-    - Lines in grey
-    - Dots in blue
-    - No grid
-    - Clean, modern style
-    """
-    if not all_data:
-        print("❌ No data to plot")
-        return None
 
-    plt.style.use('default')
+def create_coldest_temperature_plot(
+    years: np.ndarray, min_temps: np.ndarray, today: date
+) -> plt.Figure:
+    """Plot the yearly minimum temperature with a cubic trend."""
+    plt.style.use("default")
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 
-    # Extract yearly minimum temperatures (exclude 2025)
-    yearly_min_temps = {}
-    for year, daily_data in all_data.items():
-        if year != 2025:  # Exclude 2025
-            min_temp = daily_data.min()
-            if pd.notna(min_temp):
-                yearly_min_temps[year] = min_temp
+    trend_years, trend_line = _cubic_trend(years, min_temps)
+    ax.plot(years, min_temps, "-", color=GREY, linewidth=2, alpha=0.7, zorder=1)
+    ax.scatter(years, min_temps, color=BLUE, s=40, zorder=2)
+    ax.plot(
+        trend_years, trend_line, "-", color="black", linewidth=3, alpha=0.9, zorder=3
+    )
 
-    years = np.array(sorted(yearly_min_temps.keys()))
-    min_temps = np.array([yearly_min_temps[year] for year in years])
-
-    # Trend line (nonlinear, 3rd degree polynomial)
-    z = np.polyfit(years, min_temps, 3)
-    p = np.poly1d(z)
-    trend_years = np.linspace(years.min(), years.max(), 300)
-    trend_line = p(trend_years)
-
-    # Plot the grey line
-    ax.plot(years, min_temps, '-', color='#888888', linewidth=2, alpha=0.7, zorder=1)
-    # Plot the blue dots
-    ax.scatter(years, min_temps, color='#1B6CA8', s=40, zorder=2)
-    # Plot the black trend line
-    ax.plot(trend_years, trend_line, '-', color='black', linewidth=3, alpha=0.9, zorder=3)
-
-    # Highlight the coldest year
     overall_min = min_temps.min()
     overall_min_year = years[min_temps.argmin()]
-    ax.scatter([overall_min_year], [overall_min], color='black', s=100, edgecolor='white', linewidth=2, zorder=4)
+    ax.scatter(
+        [overall_min_year],
+        [overall_min],
+        color="black",
+        s=100,
+        edgecolor="white",
+        linewidth=2,
+        zorder=4,
+    )
+    ax.annotate(
+        f"{overall_min:.1f}°C",
+        xy=(overall_min_year, overall_min),
+        xytext=(overall_min_year + 5, overall_min),
+        fontsize=16,
+        fontweight="bold",
+        color="black",
+        arrowprops=dict(facecolor="black", arrowstyle="->", lw=2, alpha=0.7),
+        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", lw=1, alpha=0.8),
+    )
 
-    # Clean, modern style
-    ax.set_xlabel('Year', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_ylabel('Minimum Temperature (°C)', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_title(f'Coldest Temperature Each Year\nPotsdam Säkularstation, Germany ({years.min()}-{years.max()})', fontsize=22, fontweight='bold', pad=25)
-    ax.set_ylim(-30, 0)
-    ax.tick_params(axis='both', labelsize=14, length=6, width=2)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_linewidth(2)
-    ax.spines['bottom'].set_linewidth(2)
-
-    # Remove grid
-    ax.grid(False)
-
-    # No legend
-
-    # Annotation for coldest year
-    ax.annotate(f'{overall_min:.1f}°C',
-                xy=(overall_min_year, overall_min),
-                xytext=(overall_min_year+5, overall_min),
-                fontsize=16, fontweight='bold', color='black',
-                arrowprops=dict(facecolor='black', arrowstyle='->', lw=2, alpha=0.7),
-                bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='black', lw=1, alpha=0.8))
-
-    # Data source and update date
-    today = date.today()
-    ax.text(0.99, 0.01, f'Data: Meteostat/DWD\nUpdated: {today.strftime("%d.%m.%Y")}',
-            transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
+    ax.set_ylim(min_temps.min() - 2, min_temps.max() + 2)
+    _style_axes(
+        ax,
+        "Year",
+        "Minimum Temperature (°C)",
+        f"Coldest Temperature Each Year\nPotsdam Säkularstation, Germany "
+        f"({years.min()}-{years.max()})",
+        today,
+    )
 
     plt.tight_layout()
-    plt.savefig('plots/coldest_temperature_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'plots/coldest_temperature_plot.png'")
+    plt.savefig(
+        f"{OUTPUT_DIR}/coldest_temperature_plot.png", dpi=300, bbox_inches="tight"
+    )
+    print(f"📊 Saved {OUTPUT_DIR}/coldest_temperature_plot.png")
     return fig
 
-# To generate the coldest temperature plot, fetch tmin instead of tmax in get_real_temperature_data
 
-def get_real_min_temperature_data():
-    print("❄️ Fetching REAL daily minimum temperature data for Potsdam...")
-    stations = Stations()
-    stations = stations.nearby(52.3833, 13.0667)
-    station = stations.fetch(1)
-    if station.empty:
-        print("❌ No station found")
-        return None
-    station_id = station.index[0]
-    years_to_analyze = list(range(1890, 2026))
-    all_data = {}
-    for year in years_to_analyze:
-        start = datetime(year, 1, 1)
-        end = datetime(2025, 7, 2) if year == 2025 else datetime(year, 12, 31)
-        try:
-            data = Daily(station_id, start, end).fetch()
-            if not data.empty and 'tmin' in data.columns:
-                expected_days = 183 if year == 2025 else (366 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 365)
-                non_null_data = data['tmin'].dropna()
-                actual_days = len(non_null_data)
-                coverage_percentage = (actual_days / expected_days) * 100
-                if year == 2025 or coverage_percentage >= 80.0:
-                    daily_tmin = data['tmin']
-                    all_data[year] = daily_tmin
-            else:
-                continue
-        except Exception as e:
-            continue
-    if not all_data:
-        print("❌ No real data could be retrieved")
-        return None
-    print(f"\n✅ Successfully retrieved real minimum temperature data for {len(all_data)} years")
-    return all_data
-
-def plot_days_above_30C(all_data):
-    """
-    Plot the number of days per year with tmax > 30°C.
-    """
-    if not all_data:
-        print("❌ No data to plot")
-        return None
-    plt.style.use('default')
+def plot_threshold_count(
+    years: np.ndarray,
+    counts: np.ndarray,
+    today: date,
+    title: str,
+    color: str,
+    filename: str,
+) -> plt.Figure:
+    """Generic 'number of days per year over/under a threshold' plot."""
+    plt.style.use("default")
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
-    years = sorted(all_data.keys())
-    # Exclude 2025
-    years = [y for y in years if y != 2025]
-    days_above_30 = [ (all_data[y] > 30).sum() for y in years ]
-    years = np.array(years)
-    days_above_30 = np.array(days_above_30)
-    # Trend line
-    z = np.polyfit(years, days_above_30, 3)
-    p = np.poly1d(z)
-    trend_years = np.linspace(years.min(), years.max(), 300)
-    trend_line = p(trend_years)
-    # Plot
-    ax.plot(years, days_above_30, '-', color='#888888', linewidth=2, alpha=0.7, zorder=1)
-    ax.scatter(years, days_above_30, color='#D7263D', s=40, zorder=2)
-    ax.plot(trend_years, trend_line, '-', color='black', linewidth=3, alpha=0.9, zorder=3)
-    # Style
-    ax.set_xlabel('Year', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_ylabel('Number of Days', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_title(f'Days per Year with Maximum Temperature > 30°C\nPotsdam Säkularstation, Germany ({years.min()}-{years.max()})', fontsize=22, fontweight='bold', pad=25)
-    ax.set_ylim(0, days_above_30.max() + 5)
-    ax.tick_params(axis='both', labelsize=14, length=6, width=2)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_linewidth(2)
-    ax.spines['bottom'].set_linewidth(2)
-    ax.grid(False)
-    # No legend
-    today = date.today()
-    ax.text(0.99, 0.01, f'Data: Meteostat/DWD\nUpdated: {today.strftime("%d.%m.%Y")}',
-            transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
+
+    trend_years, trend_line = _cubic_trend(years, counts)
+    ax.plot(years, counts, "-", color=GREY, linewidth=2, alpha=0.7, zorder=1)
+    ax.scatter(years, counts, color=color, s=40, zorder=2)
+    ax.plot(
+        trend_years, trend_line, "-", color="black", linewidth=3, alpha=0.9, zorder=3
+    )
+
+    ax.set_ylim(max(0, counts.min() - 5), counts.max() + 5)
+    _style_axes(ax, "Year", "Number of Days", title, today)
+
     plt.tight_layout()
-    plt.savefig('plots/days_above_30C_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'plots/days_above_30C_plot.png'")
+    plt.savefig(f"{OUTPUT_DIR}/{filename}", dpi=300, bbox_inches="tight")
+    print(f"📊 Saved {OUTPUT_DIR}/{filename}")
     return fig
 
-def plot_days_below_0C(all_data):
-    """
-    Plot the number of days per year with tmin < 0°C.
-    """
-    if not all_data:
-        print("❌ No data to plot")
-        return None
-    plt.style.use('default')
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
-    years = sorted(all_data.keys())
-    # Exclude 2025
-    years = [y for y in years if y != 2025]
-    days_below_0 = [ (all_data[y] < 0).sum() for y in years ]
-    years = np.array(years)
-    days_below_0 = np.array(days_below_0)
-    # Trend line
-    z = np.polyfit(years, days_below_0, 3)
-    p = np.poly1d(z)
-    trend_years = np.linspace(years.min(), years.max(), 300)
-    trend_line = p(trend_years)
-    # Plot
-    ax.plot(years, days_below_0, '-', color='#888888', linewidth=2, alpha=0.7, zorder=1)
-    ax.scatter(years, days_below_0, color='#1B6CA8', s=40, zorder=2)
-    ax.plot(trend_years, trend_line, '-', color='black', linewidth=3, alpha=0.9, zorder=3)
-    # Style
-    ax.set_xlabel('Year', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_ylabel('Number of Days', fontsize=18, fontweight='bold', labelpad=15)
-    ax.set_title(f'Days per Year with Minimum Temperature < 0°C\nPotsdam Säkularstation, Germany ({years.min()}-{years.max()})', fontsize=22, fontweight='bold', pad=25)
-    ax.set_ylim(days_below_0.min() - 5, days_below_0.max() + 5)
-    ax.tick_params(axis='both', labelsize=14, length=6, width=2)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_linewidth(2)
-    ax.spines['bottom'].set_linewidth(2)
-    ax.grid(False)
-    # No legend
-    today = date.today()
-    ax.text(0.99, 0.01, f'Data: Meteostat/DWD\nUpdated: {today.strftime("%d.%m.%Y")}',
-            transform=ax.transAxes, ha='right', va='bottom', fontsize=12, color='#444444', alpha=0.8)
-    plt.tight_layout()
-    plt.savefig('plots/days_below_0C_plot.png', dpi=300, bbox_inches='tight')
-    print("📊 Plot saved as 'plots/days_below_0C_plot.png'")
-    return fig
 
-# In main(), after creating the hottest and coldest plots, call these new functions:
-# plot_days_above_30C(all_data)  # for tmax
-def main():
-    print("🌡️ HOTTEST TEMPERATURE ANALYSIS")
-    print("="*60)
-    all_data = get_real_temperature_data()
-    if all_data:
-        create_hottest_temperature_plot(all_data)
-        plot_days_above_30C(all_data)
-    print("\nNow generating coldest temperature plot...")
-    min_data = get_real_min_temperature_data()
-    if min_data:
-        create_coldest_temperature_plot(min_data)
-        plot_days_below_0C(min_data)
+def main() -> None:
+    print("🌡️ POTSDAM SÄKULARSTATION TEMPERATURE ANALYSIS")
+    print("=" * 60)
+
+    df, today = fetch_daily_extremes()
+
+    # Hottest temperature each year (+ current year so far)
+    years, max_temps, current_max = annual_aggregate(df["tmax"], today, "max")
+    if current_max is not None:
+        print(f"🔥 {today.year} hottest so far: {current_max:.1f}°C")
+    create_hottest_temperature_plot(years, max_temps, today, current_max)
+
+    # Days per year above 30 °C
+    hot_years, hot_counts = annual_threshold_count(df["tmax"], today, lambda g: g > 30)
+    plot_threshold_count(
+        hot_years,
+        hot_counts,
+        today,
+        f"Days per Year with Maximum Temperature > 30°C\n"
+        f"Potsdam Säkularstation, Germany ({hot_years.min()}-{hot_years.max()})",
+        RED,
+        "days_above_30C_plot.png",
+    )
+
+    # Coldest temperature each year
+    cold_years, min_temps, _ = annual_aggregate(df["tmin"], today, "min")
+    create_coldest_temperature_plot(cold_years, min_temps, today)
+
+    # Days per year below 0 °C
+    frost_years, frost_counts = annual_threshold_count(
+        df["tmin"], today, lambda g: g < 0
+    )
+    plot_threshold_count(
+        frost_years,
+        frost_counts,
+        today,
+        f"Days per Year with Minimum Temperature < 0°C\n"
+        f"Potsdam Säkularstation, Germany ({frost_years.min()}-{frost_years.max()})",
+        BLUE,
+        "days_below_0C_plot.png",
+    )
+
+    print("\n✅ Done.")
+
 
 if __name__ == "__main__":
-    main() 
+    main()
