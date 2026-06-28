@@ -4,120 +4,110 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Weather station data analysis package for extreme value statistics, long-term climate trends, and drought analysis. Features 133 years of data from Potsdam Säkularstation (Germany) and comprehensive Iran megadrought analysis tools (1950-2025).
+Weather station data analysis package for extreme value statistics, long-term climate trends, and drought analysis. Features 130+ years of data from the Potsdam Säkularstation (Germany) and a comprehensive Iran megadrought analysis suite (1950–2025). Output is split between a reusable library (`src/weatherstation_analysis/`) and many standalone, run-once analysis/figure scripts at the repo root.
+
+## ⚠️ Critical environment caveat: Meteostat 1.x vs 2.x
+
+This is the first thing to check when anything that fetches weather data fails.
+
+- `requirements.txt` pins `meteostat>=1.6.0` (unbounded), so a fresh install pulls **Meteostat 2.x**, which is a **breaking rewrite**. The 1.x class API (`from meteostat import Stations, Daily`; `Stations().nearby(...).fetch()`; `Daily(id, start, end).fetch()`) **no longer exists**.
+- As a result, under the currently-installed `meteostat` (2.1.3) **`import weatherstation_analysis` raises `ImportError: cannot import name 'Stations'`**, and **`pytest` collects 0 tests with 3 collection errors** — the package and most scripts are written against the removed 1.x API.
+- Files still on the broken 1.x API: package modules `data_fetcher.py`, `weather_fetcher.py`, `city_manager.py`; scripts `real_precipitation_plot.py`, `germany_centennial_stations.py`, `berlin_autumn_2024_infographic.py`, `berlin_autumn_decadal_analysis.py`, and the root `test_meteostat_api.py` / `test_german_stations.py` probes.
+- **`hottest_temperature_plot.py` is the one file already migrated to the 2.x functional API** — use it as the reference for porting the rest.
+
+### Meteostat 2.x API (the working pattern, from `hottest_temperature_plot.py`)
+
+```python
+import meteostat
+from meteostat import Parameter, Point, daily
+
+meteostat.config.block_large_requests = False   # required for daily ranges > 30 years
+near = meteostat.stations.nearby(Point(52.3833, 13.0667, 81), radius=50000, limit=1)
+sid = near.index[0]                              # DataFrame indexed by station id; Potsdam = "10379"
+df = daily(sid, start, end, parameters=[Parameter.TMAX, Parameter.TMIN]).fetch()  # date-indexed DataFrame
+```
+
+Notes: `daily()/hourly()/monthly()` are module-level functions returning a `TimeSeries`; call `.fetch()` for a DataFrame. `meteostat.stations.nearby/meta/query` replace the old `Stations` class (`from meteostat.stations import ...` does NOT work — access via `meteostat.stations.<fn>`). Prefer **one wide date-range request** over per-year loops. Meteostat/DWD serves Potsdam (`10379`) data with ~0-day latency, so the current (incomplete) day is available but preliminary.
 
 ## Common Commands
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # for development
-pip install -e .                      # editable install
+# Install
+pip install -r requirements.txt          # NOTE: pulls meteostat 2.x — see caveat above
+pip install -r requirements-dev.txt      # dev tools (black, isort, mypy, flake8, pytest, pre-commit)
+pip install -e .                         # editable install (src layout)
 
-# Run tests
-pytest                                # all tests with coverage
-pytest -m "not slow"                  # skip slow tests
-pytest -m unit                        # unit tests only
-pytest -m integration                 # integration tests only
-pytest tests/test_data_fetcher.py    # single test file
+# Tests (currently failing to collect until the meteostat-2.x migration is finished)
+pytest                                   # all tests + coverage (config in pyproject.toml)
+pytest -m "not slow"                     # skip slow tests
+pytest -m unit                           # markers: unit, integration, slow
+pytest tests/test_extreme_analyzer.py    # single file
+pytest tests/test_extreme_analyzer.py::TestExtremeValueAnalyzer::test_x   # single test
 
-# Code quality
-black src/ tests/                     # format code
-isort src/ tests/                     # sort imports
-mypy src/                             # type checking
-flake8 src/ tests/                    # linting
-pre-commit run --all-files            # all quality checks
+# Code quality (CI enforces black + flake8; mypy/isort are advisory there)
+black src/ tests/                        # 88-char line length, target py38
+isort src/ tests/                        # black profile
+flake8 src/ tests/                       # config lives in .flake8 (see note below)
+mypy src/                                # strict mode (see pyproject.toml)
+pre-commit run --all-files
 
-# Run analysis scripts
-python potsdam_extreme_values.py      # complete extreme value analysis
-python hottest_temperature_plot.py    # temperature analysis
-python real_precipitation_plot.py     # precipitation analysis
-python iran_drought_analysis.py       # Basic Iran drought analysis (2018-2025)
-python iran_megadrought_analysis.py   # COMPREHENSIVE Iran analysis (1950-2025, all 10 stations)
+# Representative analysis scripts (run from the repo root; they write into plots/ or results/)
+python hottest_temperature_plot.py       # Potsdam tmax/tmin extremes + threshold-day counts (MIGRATED to 2.x)
+python potsdam_extreme_values.py         # Gumbel return periods / threshold exceedances
+python iran_megadrought_analysis.py      # comprehensive Iran 1950–2025 analysis -> results/iran_megadrought_analysis/
 ```
 
 ## Architecture
 
-### Core Package (`src/weatherstation_analysis/`)
+Three layers: a **library** under `src/weatherstation_analysis/`, and at the repo root a set of **standalone analysis scripts** plus **ad-hoc API probes**.
 
-- **data_fetcher.py**: `PotsdamDataFetcher` - fetches data from Meteostat API for Potsdam station
-- **weather_fetcher.py**: `WeatherDataFetcher` - generic weather data fetcher
-- **extreme_analyzer.py**: `ExtremeValueAnalyzer` - statistical analysis (Gumbel distribution, return periods, threshold exceedances)
-- **visualization.py**: `WeatherPlotter` - publication-quality matplotlib plots
-- **city_manager.py**: `CityManager` - manages city/station metadata
+### Core data flow
 
-### Iran Drought Analysis (`src/weatherstation_analysis/`)
+The consistent pipeline across the codebase is **fetcher → analyzer → plotter**:
 
-**Basic modules:**
-- **iran_data_fetcher.py**: `IranianDataFetcher` - fetches NOAA GHCN-Daily data for 10 Iranian stations
-- **drought_analyzer.py**: `DroughtAnalyzer` - calculates SPI, precipitation deficits, anomalies
-- **drought_plotter.py**: `DroughtPlotter` - drought-specific visualizations
+- **Fetchers** return per-year dicts/DataFrames after a quality gate (only years with **≥80% daily coverage** are kept). `PotsdamDataFetcher` (`data_fetcher.py`) is the canonical example.
+- **Analyzers** consume that data: `ExtremeValueAnalyzer` (Gumbel distribution, return periods, threshold exceedances) for the German stations; the drought analyzers (below) for Iran.
+- **Plotters** (`WeatherPlotter`, `DroughtPlotter`, `AdvancedDroughtPlotter`) produce publication-/social-quality matplotlib figures.
 
-**Advanced modules (for publication-quality research):**
-- **advanced_drought_analyzer.py**:
-  - `DroughtReturnPeriodAnalyzer` - Gumbel/GEV extreme value analysis for drought return periods
-  - `CompoundEventAnalyzer` - concurrent drought-heat event analysis
-  - `DroughtDSAAnalyzer` - Duration-Severity-Area curve analysis
-  - `DroughtRegimeAnalyzer` - CUSUM change point detection, decadal trends
-  - `WaveletDroughtAnalyzer` - periodicity detection (ENSO, PDO connections)
-  - `MegadroughtAnalyzer` - unified comprehensive analysis
-- **advanced_drought_plotter.py**: `AdvancedDroughtPlotter` - publication-quality multi-panel figures
+### Library modules (`src/weatherstation_analysis/`)
 
-### Top-Level Analysis Scripts
+`__init__.py` re-exports the public classes — read it for the authoritative surface. Beyond the core fetcher/analyzer/plotter trio and `CityManager`:
 
-- **iran_megadrought_analysis.py**: Comprehensive scientific analysis of Iran's 2018-2025 megadrought with full 1950-2025 historical context, all 10 stations, return period analysis, compound events, and regime shifts. Output to `results/iran_megadrought_analysis/`.
+- **Iran drought (basic)**: `iran_data_fetcher.py` (`IranianDataFetcher`, `IranianStationRegistry`, `MultiStationFetcher` — NOAA GHCN-Daily, 10 cities), `drought_analyzer.py` (`DroughtAnalyzer`, `MultiStationDroughtAnalyzer` — SPI, deficits, anomalies), `drought_plotter.py`.
+- **Iran drought (advanced, publication-grade)**: `advanced_drought_analyzer.py` bundles `DroughtReturnPeriodAnalyzer` (Gumbel/GEV), `CompoundEventAnalyzer` (concurrent drought–heat), `DroughtDSAAnalyzer` (Duration-Severity-Area), `DroughtRegimeAnalyzer` (CUSUM change points, decadal trends), `WaveletDroughtAnalyzer` (ENSO/PDO periodicity), `MegadroughtAnalyzer` (unified); plotted by `advanced_drought_plotter.py`.
+- **Multi-source / gridded fetchers** (not mentioned in older docs): `era5_fetcher.py` (`ERA5Fetcher`, uses `cdsapi`), `chirps_fetcher.py` (`CHIRPSFetcher`, exported), and a **separate, un-exported** `chirps_data_fetcher.py` (`CHIRPSDataFetcher`, uses the `climateserv` API). When touching CHIRPS, confirm which of the two you mean. CHIRPS access has been historically painful — see `CHIRPS_Data_Access_Efforts.md`. `era5_fetcher.py`/`chirps_fetcher.py` guard `xarray` as an optional dependency via `TYPE_CHECKING`.
 
-## Code Style
+### Root-level scripts (not importable; run directly)
 
-- Python 3.8+
-- Black formatter (88 char line length)
-- isort for imports (black profile)
-- Type hints required (mypy strict mode)
-- Google-style docstrings
+Grouped by topic — each writes PNGs into `plots/` unless noted:
+
+- **Potsdam/Germany centennial**: `hottest_temperature_plot.py`, `potsdam_extreme_values.py`, `real_precipitation_plot.py`, `real_precipitation_plot_dwd.py`, `update_potsdam_plot.py`, `germany_centennial_*.py`.
+- **Berlin**: `berlin_autumn_2024_infographic.py`, `berlin_autumn_decadal_analysis.py` (also emit Bluesky captions into `plots/`).
+- **Texas**: `texas_flash_flood_cumulative_improved.py`.
+- **Iran**: `iran_megadrought_analysis.py` (canonical, → `results/iran_megadrought_analysis/`), `iran_drought_analysis.py`, `iran_hydrological_drought_analysis.py`, `iran_simple_precipitation_plot.py`.
+- **Ad-hoc API probes (NOT pytest tests)**: root `test_meteostat_api.py`, `test_german_stations.py`, `test_wetterdienst_correct_api.py`. `pytest` only collects `tests/` (per `testpaths`), so these are scratch scripts despite the `test_` prefix.
+
+## Conventions & config gotchas
+
+- **Output dirs**: top-level scripts write figures to `plots/` (these PNGs ARE version-controlled — `.gitignore` deliberately keeps them) and structured results to `results/<analysis_name>/`.
+- **flake8 config duplication**: there is both a `.flake8` file and a `[tool.flake8]` table in `pyproject.toml`. flake8 does **not** read `pyproject.toml` by default, so **`.flake8` is the effective config** (max-line-length 88, ignore E203/W503, max-complexity 10, google docstrings).
+- **Dead entry point**: `setup.py` declares console_script `weatherstation-analysis=weatherstation_analysis.cli:main`, but there is **no `cli.py`** — installing then running the command will fail until a CLI is added or the entry point removed.
+- **CI**: `.github/workflows/simple-ci.yml` is active (push/PR to `main`, **Python 3.9**): pytest+coverage, `black --check`, `flake8` (all hard-fail); `mypy` and `isort --check` run with `continue-on-error`. The richer `.github/workflows/ci.yml.disabled` is intentionally disabled. Note CI's 3.9 vs black/mypy's `py38` target.
+- **`GEMINI.md`** is a parallel AI-assistant instruction file (for Gemini); keep substantive guidance changes in sync with this file when relevant.
+- Style: Python 3.8+ (classifiers 3.8–3.11), Black (88 cols), isort (black profile), mypy strict, Google-style docstrings.
 
 ## Data Sources
 
-- **Primary**: Meteostat API (meteostat.net) - backed by DWD
-- **Iran**: NOAA GHCN-Daily (10 major cities: Tehran, Mashhad, Isfahan, Tabriz, Shiraz, Ahvaz, Kerman, Rasht, Zahedan, Bandar Abbas)
-- Quality filtering: only years with ≥80% data availability
+- **Germany**: Meteostat (meteostat.net, backed by DWD). Potsdam Säkularstation ≈ Meteostat station `10379` at (52.3833°N, 13.0667°E).
+- **Iran**: NOAA GHCN-Daily — Tehran, Mashhad, Isfahan, Tabriz, Shiraz, Ahvaz, Kerman, Rasht, Zahedan, Bandar Abbas.
+- **Gridded (in progress)**: ERA5 via `cdsapi`, CHIRPS via `climateserv`.
+- Quality filter throughout: keep only years with **≥80% daily availability**.
 
-## Proposed Enhancements for Publication-Quality Analysis
+## Roadmap (aspirational — not yet implemented)
 
-To elevate the `iran_megadrought_analysis.py` script to the standard of a top-tier scientific publication, the following enhancements should be implemented. The goal is to move beyond *describing* the drought to *attributing* its causes and impacts, specifically disentangling the roles of global warming, natural variability, and human water demand.
+The repo carries a research roadmap to lift `iran_megadrought_analysis.py` to publication standard; treat as future work, not existing capability:
 
-### 1. Make the Analysis "Bulletproof" (Methodological Rigor)
-
-- **Data Homogenization**: Before analysis, apply a data homogenization process to all station records (e.g., using `pyhomog`) to correct for non-climatic shifts (e.g., station moves, instrument changes). This ensures that detected trends are purely climatic.
-- **Integrate Satellite Precipitation Data**: Integrate a gridded satellite dataset like **CHIRPS** into the analysis. This will validate the ground station data and provide a more complete spatial picture of precipitation, especially in the vital mountainous headwaters where stations are sparse. This is a critical step.
-- **Use Multiple Drought Indices**: The analysis currently relies on the Standardized Precipitation Index (SPI). It should be expanded to include the **Standardized Precipitation-Evapotranspiration Index (SPEI)**. SPEI incorporates temperature's effect on water demand, making it a more robust indicator of drought under a warming climate.
-- **Quantify Uncertainty**: All statistical analyses must include uncertainty quantification.
-    - For the return period analysis, calculate and plot **confidence intervals**.
-    - For all trend analyses, report **p-values** to demonstrate statistical significance.
-
-### 2. Attribute Precipitation Changes (Climate Signal vs. Natural Cycles)
-
-- **Enhance Periodicity Analysis**: The existing `WaveletDroughtAnalyzer` should be enhanced to not just find cycles, but to statistically link them to major climate oscillations (e.g., ENSO, NAO).
-- **Method**:
-    1. Obtain time series data for relevant climate indices (e.g., Southern Oscillation Index).
-    2. Use wavelet analysis to show shared periodicity between the precipitation data and these indices.
-    3. Use a statistical model (e.g., multiple linear regression) to model precipitation based on these natural cycles.
-    4. Analyze the *residual* of this model. This residual represents the precipitation variability *not* explained by natural cycles, and can be analyzed for a long-term trend more attributable to anthropogenic climate change.
-
-### 3. Disentangle Climate Change from Population and Mismanagement
-
-This is the most novel part of the proposed research. The goal is to separate the climatic drivers (less rain, more heat) from the societal drivers (water demand, policy).
-
-- **Action**: Use a hydrological model to simulate a key river basin (e.g., the Zayandeh-Rud or Karun basins, fed by the Zagros mountains).
-- **Method**:
-    1.  **Input Climate Data**: Use the historical precipitation and temperature data (from GHCN-D and CHIRPS) to "force" a hydrological model (e.g., a simple conceptual model like HBV).
-    2.  **Input Demand Data**: Use historical population data or agricultural land use statistics as a proxy for water demand.
-    3.  **Run Two Scenarios**:
-        *   **Scenario A (Climate Impact Only)**: Run the model with changing climate data but keep water demand constant at a baseline level (e.g., 1980s levels).
-        *   **Scenario B (Combined Impact)**: Run the model with both changing climate data and changing water demand.
-- **Outcome**: By comparing the simulated river flow and water storage between Scenario A and Scenario B, you can **quantitatively separate the impact of climate change (drought) from the impact of increased population and mismanagement (demand)**. This will provide a powerful and unique finding.
-
-### 4. Strengthen the Global Warming Connection
-
-- **Action**: Perform a robust trend analysis on the temperature data from all stations (1950-2025).
-- **Method**: Calculate the rate of warming (e.g., °C per decade) and its statistical significance for each station and regionally.
-- **Outcome**: This will provide direct, quantitative evidence of the local impact of global warming in Iran. This warming trend can then be directly linked to the increased drought severity through the SPEI analysis and the `CompoundEventAnalyzer`, creating a clear and compelling narrative for the paper.
+1. **Rigor**: data homogenization (`pyhomog`), integrate CHIRPS satellite precip, add SPEI alongside SPI, and quantify uncertainty (confidence intervals on return periods, p-values on trends).
+2. **Attribution of precip change**: link `WaveletDroughtAnalyzer` cycles to climate indices (ENSO/NAO), regress precip on natural cycles, analyze the residual for an anthropogenic trend.
+3. **Climate vs. demand**: force a conceptual hydrological model (e.g. HBV) on a Zagros-fed basin (Zayandeh-Rud/Karun); compare a climate-only scenario vs. a climate+demand scenario to separate drought from water mismanagement.
+4. **Warming signal**: robust per-station/regional temperature trends (°C/decade + significance), tied back to SPEI and compound heat–drought events.
