@@ -9,9 +9,10 @@ period (default 1991-2020):
 * warm bar / up-triangle   -> day warmer than the climatological daily maximum
 * cool bar / down-triangle -> day cooler than the climatological daily maximum
 
-Behind the bars, nested grey bands show the 5/10/25/75/90/95 percentile
-distribution of the reference period; a table underneath lists the monthly mean
-daily maximum and its anomaly, and the warmest day so far is annotated.
+Behind the bars, nested grey bands show the reference-period distribution: the
+min-max envelope plus the 10/25/75/90 percentile bands. A table underneath lists
+the monthly mean daily maximum and its anomaly, and the warmest day so far is
+annotated.
 
 Targets the Meteostat 2.x functional API. See CLAUDE.md for the API caveat.
 """
@@ -53,7 +54,7 @@ STATIONS = {
 REF_START, REF_END = 1991, 2020  # climatological reference period
 SMOOTH_WINDOW = 15  # days, odd circular moving-average window for climatology
 DAYS_IN_YEAR = 365  # fixed (leap-day-folded) day-of-year grid length
-PCT_LEVELS = [5, 10, 25, 75, 90, 95]  # percentile bands of the distribution
+PCT_LEVELS = [10, 25, 75, 90]  # inner percentile bands of the distribution
 OUTPUT_DIR = "plots"
 
 # Axes box in figure coordinates (shared by the plot and the bottom table)
@@ -67,11 +68,16 @@ RED = "#E4572E"  # warmer than normal
 BLUE = "#3D7EA6"  # cooler than normal
 LINE_COLOR = "#1F2D3D"  # climatological mean line
 HILITE = "#1F2D3D"  # warmest-day annotation
-BAND_COLORS = {  # (low, high) percentile -> grey level, darkest = innermost
-    (25, 75): "#bdbdbd",
+# Bands painted widest (outermost) first so inner bands sit on top. Edge keys
+# index into the climatology dict ("min"/"max" or a percentile int).
+BAND_COLORS = {
+    ("min", "max"): "#ececec",
     (10, 90): "#d6d6d6",
-    (5, 95): "#ececec",
+    (25, 75): "#bdbdbd",
 }
+# Band-edge labels drawn just inside the margins (top -> bottom)
+MARGIN_LABELS = [("max", "max"), (90, "90"), (75, "75"),
+                 (25, "25"), (10, "10"), ("min", "min")]
 
 # Non-leap calendar: cumulative first-day-of-month day numbers (1..365)
 _DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -150,14 +156,20 @@ def build_climatology(series: pd.Series, ref_start: int, ref_end: int) -> dict:
     grid = np.arange(1, DAYS_IN_YEAR + 1)
 
     grouped = frame.groupby("doy")["tmax"]
-    mean = grouped.mean().reindex(grid).interpolate(limit_direction="both").to_numpy()
 
+    def _smoothed(series: pd.Series) -> np.ndarray:
+        filled = series.reindex(grid).interpolate(limit_direction="both")
+        return circular_smooth(filled.to_numpy(), SMOOTH_WINDOW)
+
+    out = {
+        "grid": grid,
+        "mean": _smoothed(grouped.mean()),
+        "min": _smoothed(grouped.min()),
+        "max": _smoothed(grouped.max()),
+    }
     quantiles = grouped.quantile([p / 100 for p in PCT_LEVELS]).unstack()
-    quantiles = quantiles.reindex(grid).interpolate(limit_direction="both")
-
-    out = {"mean": circular_smooth(mean, SMOOTH_WINDOW), "grid": grid}
     for p in PCT_LEVELS:
-        out[p] = circular_smooth(quantiles[p / 100].to_numpy(), SMOOTH_WINDOW)
+        out[p] = _smoothed(quantiles[p / 100])
     return out
 
 
@@ -242,8 +254,8 @@ def make_plot(key: str, year: int | None = None) -> str:
                         bottom=PLOT_BOTTOM)
     grid = clim["grid"]
 
-    # Percentile bands (outermost first so inner ones paint on top)
-    for (lo, hi), colour in sorted(BAND_COLORS.items(), key=lambda kv: kv[0][0]):
+    # Distribution bands (BAND_COLORS is widest-first so inner bands paint on top)
+    for (lo, hi), colour in BAND_COLORS.items():
         ax.fill_between(grid, clim[lo], clim[hi], color=colour, linewidth=0, zorder=1)
 
     # Daily bars + triangle markers for the current year
@@ -272,17 +284,17 @@ def make_plot(key: str, year: int | None = None) -> str:
         arrowprops=dict(arrowstyle="->", lw=1.2, color=HILITE),
     )
 
-    # Percentile labels just inside both margins
-    for p in PCT_LEVELS:
-        ax.text(4, clim[p][0], str(p), color="#8f8f8f", fontsize=8,
+    # Band-edge labels just inside both margins (min/max + inner percentiles)
+    for edge, lab in MARGIN_LABELS:
+        ax.text(4, clim[edge][0], lab, color="#8f8f8f", fontsize=8,
                 ha="left", va="center", zorder=6)
-        ax.text(362, clim[p][-1], str(p), color="#8f8f8f", fontsize=8,
+        ax.text(362, clim[edge][-1], lab, color="#8f8f8f", fontsize=8,
                 ha="right", va="center", zorder=6)
 
     # Axes / grid
     ax.set_xlim(1, DAYS_IN_YEAR)
-    data_lo = min(cur_val.min(), clim[5].min())
-    data_hi = max(cur_val.max(), clim[95].max())
+    data_lo = min(cur_val.min(), clim["min"].min())
+    data_hi = max(cur_val.max(), clim["max"].max())
     y_lo = min(-12, float(np.floor(data_lo - 2)))
     y_hi = max(42, float(np.ceil(data_hi + 2.5)))
     ax.set_ylim(y_lo, y_hi)
@@ -320,7 +332,7 @@ def make_plot(key: str, year: int | None = None) -> str:
                label=f"Climatological daily max ({REF_START}–{REF_END})"),
         Line2D([0], [0], marker="s", color="w", markerfacecolor="#cccccc",
                markeredgecolor="none", markersize=11,
-               label="Daily-max distribution (5–95th pct)"),
+               label="Daily-max distribution (min–max & 10–90 pct)"),
     ]
     ax.legend(handles=handles, loc="upper left", fontsize=9, frameon=False,
               handletextpad=0.6, borderpad=0.4)
