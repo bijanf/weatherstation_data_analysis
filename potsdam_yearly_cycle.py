@@ -14,11 +14,15 @@ min-max envelope plus the 10/25/75/90 percentile bands. A table underneath lists
 the monthly mean daily maximum and its anomaly, and the warmest day so far is
 annotated.
 
+Each station is rendered in three layouts (see ``LAYOUTS``): a landscape chart,
+plus Instagram-ready vertical exports (4:5 feed post and 9:16 story/reel).
+
 Targets the Meteostat 2.x functional API. See CLAUDE.md for the API caveat.
 """
 
 from __future__ import annotations
 
+import textwrap
 from datetime import date, datetime
 
 import matplotlib.pyplot as plt
@@ -57,12 +61,6 @@ DAYS_IN_YEAR = 365  # fixed (leap-day-folded) day-of-year grid length
 PCT_LEVELS = [10, 25, 75, 90]  # inner percentile bands of the distribution
 OUTPUT_DIR = "plots"
 
-# Axes box in figure coordinates (shared by the plot and the bottom table)
-PLOT_LEFT, PLOT_RIGHT, PLOT_TOP, PLOT_BOTTOM = 0.135, 0.93, 0.90, 0.21
-JAHR_X = 0.965  # figure-x of the annual ('Jahr') table column
-Y_HEADER = 0.185  # figure-y of the month / 'Jahr' header row
-Y_MEAN, Y_ANOM = 0.125, 0.075  # figure-y of the two table value rows
-
 # Divergent warm/cool palette (its own look, not the classic grey-on-crimson)
 RED = "#E4572E"  # warmer than normal
 BLUE = "#3D7EA6"  # cooler than normal
@@ -81,7 +79,7 @@ MARGIN_LABELS = [("max", "max"), (90, "90"), (75, "75"),
 
 # Non-leap calendar: cumulative first-day-of-month day numbers (1..365)
 _DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-MONTH_STARTS = np.concatenate([[1], 1 + np.cumsum(_DAYS_IN_MONTH)])  # len 13, ends 366
+MONTH_STARTS = np.concatenate([[1], 1 + np.cumsum(_DAYS_IN_MONTH)])  # len 13
 MONTH_CENTERS = (MONTH_STARTS[:-1] + MONTH_STARTS[1:]) / 2.0
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -157,8 +155,8 @@ def build_climatology(series: pd.Series, ref_start: int, ref_end: int) -> dict:
 
     grouped = frame.groupby("doy")["tmax"]
 
-    def _smoothed(series: pd.Series) -> np.ndarray:
-        filled = series.reindex(grid).interpolate(limit_direction="both")
+    def _smoothed(s: pd.Series) -> np.ndarray:
+        filled = s.reindex(grid).interpolate(limit_direction="both")
         return circular_smooth(filled.to_numpy(), SMOOTH_WINDOW)
 
     out = {
@@ -217,61 +215,64 @@ def _fmt(value: float | None) -> str:
     return "-" if value is None else f"{value:.1f}"
 
 
-def _fig_x(data_x: float) -> float:
-    """Map an x value in data coords (1..365) to a figure-x coordinate."""
-    return PLOT_LEFT + (data_x - 1) / 364.0 * (PLOT_RIGHT - PLOT_LEFT)
+# Output layouts: chart axes box (l, b, w, h in figure fractions) plus text
+# anchors and font sizes. "wide" is the landscape chart; "portrait"/"story" are
+# vertical, phone-sized exports for Instagram.
+LAYOUTS = {
+    "wide": {
+        "suffix": "", "figsize": (13, 8), "dpi": 200, "vertical": False,
+        "axes": (0.135, 0.21, 0.795, 0.69),
+        "title_size": 14, "sub_size": 11, "caption_size": 8,
+        "fs": {"tick": 10, "ylabel": 12, "legend": 9, "margin": 8, "annot": 9},
+        "table": True, "table_y": (0.185, 0.125, 0.075), "jahr_x": 0.965,
+        "caption_y": 0.022,
+    },
+    "portrait": {  # Instagram feed post, 1080x1350 (4:5)
+        "suffix": "_portrait", "figsize": (9, 11.25), "dpi": 120,
+        "vertical": True, "axes": (0.13, 0.42, 0.84, 0.40),
+        "title_size": 21, "sub_size": 13, "caption_size": 11,
+        "fs": {"tick": 12, "ylabel": 14, "legend": 11, "margin": 9, "annot": 12},
+        "table": False, "legend_y": 0.375, "stat_y": (0.31, 0.27),
+        "caption_y": 0.15, "brand_y": 0.045,
+    },
+    "story": {  # Instagram story / reel, 1080x1920 (9:16)
+        "suffix": "_story", "figsize": (9, 16), "dpi": 120,
+        "vertical": True, "axes": (0.13, 0.48, 0.84, 0.34),
+        "title_size": 24, "sub_size": 15, "caption_size": 12,
+        "fs": {"tick": 13, "ylabel": 16, "legend": 12, "margin": 10, "annot": 13},
+        "table": False, "legend_y": 0.45, "stat_y": (0.39, 0.35),
+        "caption_y": 0.27, "brand_y": 0.07,
+    },
+}
 
 
-def make_plot(key: str, year: int | None = None) -> str:
-    """Render the yearly-cycle chart for one station and save it as a PNG.
+def _draw_chart(ax, clim: dict, cur: pd.Series, fs: dict) -> dict:
+    """Draw bands, daily bars, climatology line and labels onto ``ax``.
 
-    Args:
-        key: A key into ``STATIONS``.
-        year: Year to plot; defaults to the current year (a partial current
-            year is drawn up to today).
-
-    Returns:
-        The path of the written PNG file.
+    Returns summary stats (warm-day fraction, day count, warmest day).
     """
-    station = STATIONS[key]
-    today = date.today()
-    year = year or today.year
-
-    series = fetch_tmax(station, REF_START, today)
-    clim = build_climatology(series, REF_START, REF_END)
-    table = monthly_table(series, year, REF_START, REF_END)
-
-    cur = series[series.index.year == year]
-    if cur.empty:
-        raise RuntimeError(f"No data for {year} at {station['label']}")
+    grid = clim["grid"]
     cur_doy = common_doy(cur.index)
     cur_val = cur.to_numpy()
     clim_at_cur = clim["mean"][cur_doy - 1]
     above = cur_val >= clim_at_cur
 
-    fig, ax = plt.subplots(figsize=(13, 8))
-    fig.subplots_adjust(left=PLOT_LEFT, right=PLOT_RIGHT, top=PLOT_TOP,
-                        bottom=PLOT_BOTTOM)
-    grid = clim["grid"]
-
-    # Distribution bands (BAND_COLORS is widest-first so inner bands paint on top)
     for (lo, hi), colour in BAND_COLORS.items():
-        ax.fill_between(grid, clim[lo], clim[hi], color=colour, linewidth=0, zorder=1)
+        ax.fill_between(grid, clim[lo], clim[hi], color=colour, linewidth=0,
+                        zorder=1)
 
-    # Daily bars + triangle markers for the current year
     ax.vlines(cur_doy[above], clim_at_cur[above], cur_val[above],
               color=RED, linewidth=0.7, zorder=3)
     ax.vlines(cur_doy[~above], cur_val[~above], clim_at_cur[~above],
               color=BLUE, linewidth=0.7, zorder=3)
-    ax.scatter(cur_doy[above], cur_val[above], marker="^", s=7,
-               color=RED, zorder=4)
-    ax.scatter(cur_doy[~above], cur_val[~above], marker="v", s=7,
-               color=BLUE, zorder=4)
+    ax.scatter(cur_doy[above], cur_val[above], marker="^", s=7, color=RED,
+               zorder=4)
+    ax.scatter(cur_doy[~above], cur_val[~above], marker="v", s=7, color=BLUE,
+               zorder=4)
 
-    # Climatological mean line on top
     ax.plot(grid, clim["mean"], color=LINE_COLOR, linewidth=1.1, zorder=5)
 
-    # Highlight the warmest day of the year so far
+    # Warmest day of the year so far
     hot_i = int(np.argmax(cur_val))
     hot_x, hot_y, hot_d = cur_doy[hot_i], cur_val[hot_i], cur.index[hot_i]
     ax.scatter([hot_x], [hot_y], marker="o", s=80, facecolors="none",
@@ -280,109 +281,196 @@ def make_plot(key: str, year: int | None = None) -> str:
         f"Warmest so far: {hot_y:.1f} °C "
         f"({hot_d.day} {MONTH_NAMES[hot_d.month - 1]})",
         xy=(hot_x, hot_y), xytext=(hot_x - 14, hot_y),
-        fontsize=9, fontweight="bold", color=HILITE, ha="right", va="center",
-        arrowprops=dict(arrowstyle="->", lw=1.2, color=HILITE),
+        fontsize=fs["annot"], fontweight="bold", color=HILITE, ha="right",
+        va="center", arrowprops=dict(arrowstyle="->", lw=1.2, color=HILITE),
     )
 
-    # Band-edge labels just inside both margins (min/max + inner percentiles)
     for edge, lab in MARGIN_LABELS:
-        ax.text(4, clim[edge][0], lab, color="#8f8f8f", fontsize=8,
+        ax.text(4, clim[edge][0], lab, color="#8f8f8f", fontsize=fs["margin"],
                 ha="left", va="center", zorder=6)
-        ax.text(362, clim[edge][-1], lab, color="#8f8f8f", fontsize=8,
-                ha="right", va="center", zorder=6)
+        ax.text(362, clim[edge][-1], lab, color="#8f8f8f",
+                fontsize=fs["margin"], ha="right", va="center", zorder=6)
 
-    # Axes / grid
     ax.set_xlim(1, DAYS_IN_YEAR)
     data_lo = min(cur_val.min(), clim["min"].min())
     data_hi = max(cur_val.max(), clim["max"].max())
-    y_lo = min(-12, float(np.floor(data_lo - 2)))
-    y_hi = max(42, float(np.ceil(data_hi + 2.5)))
-    ax.set_ylim(y_lo, y_hi)
+    ax.set_ylim(min(-12, float(np.floor(data_lo - 2))),
+                max(42, float(np.ceil(data_hi + 2.5))))
+    y_hi = ax.get_ylim()[1]
     ax.set_xticks(MONTH_CENTERS)
-    ax.set_xticklabels(MONTH_NAMES, fontsize=10)
+    ax.set_xticklabels(MONTH_NAMES, fontsize=fs["tick"])
     ax.tick_params(axis="x", length=0)
+    ax.tick_params(axis="y", labelsize=fs["tick"])
     ax.set_yticks(np.arange(-10, int(np.floor(y_hi)) + 1, 10))
-    ax.set_ylabel("Temperature [°C]", fontsize=12)
+    ax.set_ylabel("Temperature [°C]", fontsize=fs["ylabel"])
     ax.yaxis.grid(True, color="#e9e9e9", linewidth=0.8, zorder=0)
-    # Faint vertical month separators (a distinct touch)
     for x0 in MONTH_STARTS[1:-1]:
         ax.axvline(x0, color="#eeeeee", linewidth=0.8, zorder=0)
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
 
-    # Titles / credits (left-aligned title + grey subtitle)
-    fig.text(PLOT_LEFT, 0.955,
-             f"{station['label']} — Daily Maximum Temperature",
-             ha="left", fontsize=14, fontweight="bold")
-    fig.text(PLOT_LEFT, 0.925,
-             f"{year} compared with the {REF_START}–{REF_END} climatology",
-             ha="left", fontsize=11, color="#555555")
-    gen = f"Generated {today.day} {MONTH_NAMES[today.month - 1]} {today.year}"
-    fig.text(0.985, 0.955, gen, ha="right", fontsize=9, color="#555555")
-    fig.text(0.985, 0.925, "Data: Meteostat / DWD", ha="right", fontsize=9,
-             color="#555555")
+    return {"warm_frac": float(above.mean()), "n_days": int(above.size),
+            "hot_y": float(hot_y), "hot_d": hot_d}
 
-    # Legend
-    handles = [
+
+def _legend_handles(short: bool) -> list:
+    """Legend handles; ``short`` uses compact labels for the vertical layouts."""
+    clim_lab = ("Climatology 1991–2020" if short
+                else f"Climatological daily max ({REF_START}–{REF_END})")
+    dist_lab = ("Distribution (min–max)" if short
+                else "Daily-max distribution (min–max & 10–90 pct)")
+    return [
         Line2D([0], [0], marker="^", color="w", markerfacecolor=RED,
                markersize=9, label="Warmer than normal"),
         Line2D([0], [0], marker="v", color="w", markerfacecolor=BLUE,
                markersize=9, label="Cooler than normal"),
-        Line2D([0], [0], color=LINE_COLOR, linewidth=1.3,
-               label=f"Climatological daily max ({REF_START}–{REF_END})"),
+        Line2D([0], [0], color=LINE_COLOR, linewidth=1.3, label=clim_lab),
         Line2D([0], [0], marker="s", color="w", markerfacecolor="#cccccc",
-               markeredgecolor="none", markersize=11,
-               label="Daily-max distribution (min–max & 10–90 pct)"),
+               markeredgecolor="none", markersize=11, label=dist_lab),
     ]
-    ax.legend(handles=handles, loc="upper left", fontsize=9, frameon=False,
-              handletextpad=0.6, borderpad=0.4)
 
-    _draw_table(fig, table)
 
-    # Optional station-specific footnote (e.g. the Potsdam siting caveat)
-    if station.get("note"):
-        fig.text(PLOT_LEFT, 0.022, station["note"], ha="left", va="center",
-                 fontsize=8, style="italic", color="#666666")
+def make_plot(key: str, year: int | None = None,
+              formats: tuple = ("wide", "portrait", "story")) -> list:
+    """Render the yearly-cycle chart for one station in several formats.
 
-    out = f"{OUTPUT_DIR}/yearly_cycle_{key}_{year}.png"
-    fig.savefig(out, dpi=200)
+    Args:
+        key: A key into ``STATIONS``.
+        year: Year to plot; defaults to the current year.
+        formats: Layout names from ``LAYOUTS`` to render.
+
+    Returns:
+        The list of written PNG paths.
+    """
+    station = STATIONS[key]
+    today = date.today()
+    year = year or today.year
+
+    series = fetch_tmax(station, REF_START, today)
+    clim = build_climatology(series, REF_START, REF_END)
+    table = monthly_table(series, year, REF_START, REF_END)
+    cur = series[series.index.year == year]
+    if cur.empty:
+        raise RuntimeError(f"No data for {year} at {station['label']}")
+    n_ref = int(_ref_slice(series, REF_START, REF_END).index.year.nunique())
+
+    return [_render(LAYOUTS[f], key, station, year, today, clim, cur, table,
+                    n_ref) for f in formats]
+
+
+def _render(lay: dict, key, station, year, today, clim, cur, table,
+            n_ref: int) -> str:
+    """Compose one figure for the given layout and save it as a PNG."""
+    fig = plt.figure(figsize=lay["figsize"])
+    ax = fig.add_axes(lay["axes"])
+    info = _draw_chart(ax, clim, cur, lay["fs"])
+
+    if lay["vertical"]:
+        fig.legend(handles=_legend_handles(True), loc="upper center",
+                   bbox_to_anchor=(0.5, lay["legend_y"]), ncol=2,
+                   fontsize=lay["fs"]["legend"], frameon=False,
+                   handletextpad=0.5, columnspacing=1.6)
+    else:
+        ax.legend(handles=_legend_handles(False), loc="upper left",
+                  fontsize=lay["fs"]["legend"], frameon=False,
+                  handletextpad=0.6, borderpad=0.4)
+
+    ax_l, ax_b, ax_w, ax_h = lay["axes"]
+    ax_top = ax_b + ax_h
+    gen = f"Generated {today.day} {MONTH_NAMES[today.month - 1]} {today.year}"
+
+    if lay["vertical"]:
+        fig.text(0.5, ax_top + 0.10, station["label"], ha="center",
+                 fontsize=lay["title_size"], fontweight="bold")
+        fig.text(0.5, ax_top + 0.065, f"Daily Maximum Temperature · {year}",
+                 ha="center", fontsize=lay["sub_size"], color="#333333")
+        fig.text(0.5, ax_top + 0.038,
+                 f"vs {REF_START}–{REF_END} climatology · {n_ref} years of data",
+                 ha="center", fontsize=lay["sub_size"] - 1, color="#888888")
+        _draw_keystats(fig, table, info, lay)
+        fig.text(0.5, lay["brand_y"], f"{gen}  ·  Data: Meteostat / DWD",
+                 ha="center", fontsize=9, color="#999999")
+    else:
+        fig.text(ax_l, 0.955,
+                 f"{station['label']} — Daily Maximum Temperature",
+                 ha="left", fontsize=lay["title_size"], fontweight="bold")
+        fig.text(ax_l, 0.925,
+                 f"{year} compared with the {REF_START}–{REF_END} climatology "
+                 f"({n_ref} years of data)",
+                 ha="left", fontsize=lay["sub_size"], color="#555555")
+        fig.text(0.985, 0.955, gen, ha="right", fontsize=9, color="#555555")
+        fig.text(0.985, 0.925, "Data: Meteostat / DWD", ha="right",
+                 fontsize=9, color="#555555")
+        _draw_table(fig, table, lay)
+
+    note = station.get("note")
+    if note and lay["vertical"]:
+        fig.text(0.5, lay["caption_y"], textwrap.fill(note, width=46),
+                 ha="center", va="center", fontsize=lay["caption_size"],
+                 style="italic", color="#666666")
+    elif note:
+        fig.text(ax_l, lay["caption_y"], note, ha="left", va="center",
+                 fontsize=lay["caption_size"], style="italic", color="#666666")
+
+    out = f"{OUTPUT_DIR}/yearly_cycle_{key}_{year}{lay['suffix']}.png"
+    fig.savefig(out, dpi=lay["dpi"])
     plt.close(fig)
     print(f"📊 Saved {out}")
     return out
 
 
-def _draw_table(fig, table: dict) -> None:
-    """Render the monthly-mean / anomaly rows beneath the axes (figure coords)."""
-    # Thin separator rule underlining the month / 'Year' header
-    sep = Line2D([PLOT_LEFT - 0.02, 0.99], [Y_HEADER - 0.03, Y_HEADER - 0.03],
+def _draw_keystats(fig, table: dict, info: dict, lay: dict) -> None:
+    """Big mobile-friendly summary lines below the chart (vertical layouts)."""
+    y1, y2 = lay["stat_y"]
+    pct = round(info["warm_frac"] * 100)
+    fig.text(0.5, y1,
+             f"Warmer than normal on {pct}% of {info['n_days']} days so far",
+             ha="center", fontsize=lay["sub_size"] + 2, fontweight="bold",
+             color="#222222")
+    ym, ya = table["year_mean"], table["year_anom"]
+    if ym is not None and ya is not None:
+        colour = RED if ya >= 0 else BLUE
+        fig.text(0.5, y2,
+                 f"Year-to-date mean daily max {ym:.1f} °C  "
+                 f"({ya:+.1f} °C vs {REF_START}–{REF_END})",
+                 ha="center", fontsize=lay["sub_size"], color=colour)
+
+
+def _draw_table(fig, table: dict, lay: dict) -> None:
+    """Render the monthly-mean / anomaly table beneath the axes (wide layout)."""
+    ax_l = lay["axes"][0]
+    ax_r = lay["axes"][0] + lay["axes"][2]
+    y_header, y_mean, y_anom = lay["table_y"]
+    jahr_x = lay["jahr_x"]
+
+    def fx(data_x):
+        return ax_l + (data_x - 1) / (DAYS_IN_YEAR - 1) * (ax_r - ax_l)
+
+    sep = Line2D([ax_l - 0.02, 0.99], [y_header - 0.03, y_header - 0.03],
                  color="#cccccc", linewidth=0.8, transform=fig.transFigure)
     fig.add_artist(sep)
-
-    # Row labels at the far left, right-aligned so they end before the plot box
-    fig.text(PLOT_LEFT - 0.008, Y_MEAN, "Monthly mean [°C]", ha="right",
+    fig.text(ax_l - 0.008, y_mean, "Monthly mean [°C]", ha="right",
              va="center", fontsize=9)
-    fig.text(PLOT_LEFT - 0.008, Y_ANOM, "Anomaly [°C]", ha="right",
-             va="center", fontsize=9)
+    fig.text(ax_l - 0.008, y_anom, "Anomaly [°C]", ha="right", va="center",
+             fontsize=9)
 
     def _cell(x, mean, anom):
-        fig.text(x, Y_MEAN, _fmt(mean), ha="center", va="center", fontsize=9)
+        fig.text(x, y_mean, _fmt(mean), ha="center", va="center", fontsize=9)
         colour = "#555555" if anom is None else (RED if anom >= 0 else BLUE)
         atxt = "-" if anom is None else f"{anom:+.1f}"
-        fig.text(x, Y_ANOM, atxt, ha="center", va="center", fontsize=9,
+        fig.text(x, y_anom, atxt, ha="center", va="center", fontsize=9,
                  color=colour)
 
     for m in range(1, 13):
-        _cell(_fig_x(MONTH_CENTERS[m - 1]), table["means"][m],
-              table["anomalies"][m])
+        _cell(fx(MONTH_CENTERS[m - 1]), table["means"][m], table["anomalies"][m])
 
-    # 'Year' column header (aligned with the month names) + its values
-    fig.text(JAHR_X, Y_HEADER, "Year", ha="center", va="center", fontsize=10,
+    fig.text(jahr_x, y_header, "Year", ha="center", va="center", fontsize=10,
              fontweight="bold")
-    _cell(JAHR_X, table["year_mean"], table["year_anom"])
+    _cell(jahr_x, table["year_mean"], table["year_anom"])
 
 
 def main() -> None:
-    """Render the yearly-cycle chart for all configured stations."""
+    """Render every configured station in all output formats."""
     for key in ("potsdam", "berlin-dahlem"):
         print(f"=== {STATIONS[key]['label']} ===")
         make_plot(key)
