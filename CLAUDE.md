@@ -81,7 +81,7 @@ The consistent pipeline across the codebase is **fetcher → analyzer → plotte
 
 Grouped by topic — each writes PNGs into `plots/` unless noted:
 
-- **Potsdam/Germany centennial**: `hottest_temperature_plot.py`, `potsdam_yearly_cycle.py` (FU-Berlin-style daily-max climatology chart with percentile bands + monthly anomaly table; migrated to Meteostat 2.x), `potsdam_extreme_values.py`, `real_precipitation_plot.py`, `real_precipitation_plot_dwd.py`, `update_potsdam_plot.py`, `germany_centennial_*.py`.
+- **Potsdam/Germany centennial**: `hottest_temperature_plot.py`, `potsdam_yearly_cycle.py` (annual daily-max temperature-cycle chart: percentile bands + daily warm/cool bars + monthly anomaly table, English labels; Meteostat 2.x; renders Potsdam + Berlin-Dahlem), `potsdam_extreme_values.py`, `real_precipitation_plot.py`, `real_precipitation_plot_dwd.py`, `update_potsdam_plot.py`, `germany_centennial_*.py`.
 - **Berlin**: `berlin_autumn_2024_infographic.py`, `berlin_autumn_decadal_analysis.py` (also emit Bluesky captions into `plots/`).
 - **Texas**: `texas_flash_flood_cumulative_improved.py`.
 - **Iran**: `iran_megadrought_analysis.py` (canonical, → `results/iran_megadrought_analysis/`), `iran_drought_analysis.py`, `iran_hydrological_drought_analysis.py`, `iran_simple_precipitation_plot.py`.
