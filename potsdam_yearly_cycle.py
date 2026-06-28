@@ -55,7 +55,8 @@ STATIONS = {
     },
 }
 
-REF_START, REF_END = 1991, 2020  # climatological reference period
+REF_START, REF_END = 1991, 2020  # climatological reference period (30-yr normal)
+FETCH_START = 1893  # earliest year requested (full Säkularstation record)
 SMOOTH_WINDOW = 15  # days, odd circular moving-average window for climatology
 DAYS_IN_YEAR = 365  # fixed (leap-day-folded) day-of-year grid length
 PCT_LEVELS = [10, 25, 75, 90]  # inner percentile bands of the distribution
@@ -346,20 +347,21 @@ def make_plot(key: str, year: int | None = None,
     today = date.today()
     year = year or today.year
 
-    series = fetch_tmax(station, REF_START, today)
+    series = fetch_tmax(station, FETCH_START, today)
     clim = build_climatology(series, REF_START, REF_END)
     table = monthly_table(series, year, REF_START, REF_END)
     cur = series[series.index.year == year]
     if cur.empty:
         raise RuntimeError(f"No data for {year} at {station['label']}")
-    n_ref = int(_ref_slice(series, REF_START, REF_END).index.year.nunique())
+    rec_start = int(series.index.year.min())
+    rec_years = int(series.index.year.max() - rec_start + 1)
 
     return [_render(LAYOUTS[f], key, station, year, today, clim, cur, table,
-                    n_ref) for f in formats]
+                    rec_start, rec_years) for f in formats]
 
 
 def _render(lay: dict, key, station, year, today, clim, cur, table,
-            n_ref: int) -> str:
+            rec_start: int, rec_years: int) -> str:
     """Compose one figure for the given layout and save it as a PNG."""
     fig = plt.figure(figsize=lay["figsize"])
     ax = fig.add_axes(lay["axes"])
@@ -385,7 +387,8 @@ def _render(lay: dict, key, station, year, today, clim, cur, table,
         fig.text(0.5, ax_top + 0.065, f"Daily Maximum Temperature · {year}",
                  ha="center", fontsize=lay["sub_size"], color="#333333")
         fig.text(0.5, ax_top + 0.038,
-                 f"vs {REF_START}–{REF_END} climatology · {n_ref} years of data",
+                 f"vs {REF_START}–{REF_END} climatology · "
+                 f"{rec_years}-year record since {rec_start}",
                  ha="center", fontsize=lay["sub_size"] - 1, color="#888888")
         _draw_keystats(fig, table, info, lay)
         fig.text(0.5, lay["brand_y"], f"{gen}  ·  Data: Meteostat / DWD",
@@ -395,8 +398,8 @@ def _render(lay: dict, key, station, year, today, clim, cur, table,
                  f"{station['label']} — Daily Maximum Temperature",
                  ha="left", fontsize=lay["title_size"], fontweight="bold")
         fig.text(ax_l, 0.925,
-                 f"{year} compared with the {REF_START}–{REF_END} climatology "
-                 f"({n_ref} years of data)",
+                 f"{year} vs the {REF_START}–{REF_END} climatology  ·  "
+                 f"{rec_years}-year station record (since {rec_start})",
                  ha="left", fontsize=lay["sub_size"], color="#555555")
         fig.text(0.985, 0.955, gen, ha="right", fontsize=9, color="#555555")
         fig.text(0.985, 0.925, "Data: Meteostat / DWD", ha="right",
