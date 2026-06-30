@@ -186,3 +186,7 @@ safety-report.json
 # *.pdf
 # CDS API credentials (ERA5)
 .cdsapirc
+
+# ECMWF ENS forecast cache (large GRIB + processed arrays, regenerated per run;
+# the bias archive fc_archive.csv is already covered by *.csv above)
+results/potsdam_forecast/grib/

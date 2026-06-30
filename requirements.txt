@@ -27,4 +27,11 @@ typing-extensions>=4.0.0
 
 # CHIRPS data access
 climateserv>=0.2.0
- cdsapi
+cdsapi
+
+# ECMWF open-data 15-day ENS forecast overlay (potsdam_forecast.py) - optional;
+# the yearly-cycle chart renders without these if they are absent.
+ecmwf-opendata>=0.3.0
+cfgrib>=0.9.10
+eccodes>=1.7.0
+xarray>=2023.1.0

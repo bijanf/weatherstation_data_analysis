@@ -81,7 +81,7 @@ The consistent pipeline across the codebase is **fetcher → analyzer → plotte
 
 Grouped by topic — each writes PNGs into `plots/` unless noted:
 
-- **Potsdam/Germany centennial**: `hottest_temperature_plot.py`, `potsdam_yearly_cycle.py` (annual daily-max temperature-cycle chart: min–max envelope + percentile bands + daily warm/cool bars + monthly anomaly table, English labels; Meteostat 2.x; renders Potsdam + Berlin-Dahlem in landscape plus Instagram 4:5 portrait and 9:16 story formats via the `LAYOUTS` config), `potsdam_extreme_values.py`, `real_precipitation_plot.py`, `real_precipitation_plot_dwd.py`, `update_potsdam_plot.py`, `germany_centennial_*.py`.
+- **Potsdam/Germany centennial**: `hottest_temperature_plot.py`, `potsdam_yearly_cycle.py` (annual daily-max temperature-cycle chart: min–max envelope + percentile bands + daily warm/cool bars + monthly anomaly table, English labels; Meteostat 2.x; renders Potsdam + Berlin-Dahlem in landscape plus Instagram 4:5 portrait and 9:16 story formats via the `LAYOUTS` config; for Potsdam it also overlays a 15-day **ECMWF ENS forecast plume** from `potsdam_forecast.py`), `potsdam_forecast.py` (ECMWF open-data 15-day ENS point forecast: picks the latest long 00/12 UTC `enfo` run, reads the 50 `pf` members' daily-max 2 m temp — `mx2t3` ≤144 h then `mx2t6` — bilinearly interpolates to the station, applies a persisted rolling bias offset, returns a `PointForecast` percentile plume; free/real-time, CC-BY-4.0; optional deps `ecmwf-opendata`+`cfgrib`/`eccodes`/`xarray`, fails soft so the chart still renders), `potsdam_extreme_values.py`, `real_precipitation_plot.py`, `real_precipitation_plot_dwd.py`, `update_potsdam_plot.py`, `germany_centennial_*.py`.
 - **Berlin**: `berlin_autumn_2024_infographic.py`, `berlin_autumn_decadal_analysis.py` (also emit Bluesky captions into `plots/`).
 - **Texas**: `texas_flash_flood_cumulative_improved.py`.
 - **Iran**: `iran_megadrought_analysis.py` (canonical, → `results/iran_megadrought_analysis/`), `iran_drought_analysis.py`, `iran_hydrological_drought_analysis.py`, `iran_simple_precipitation_plot.py`.
@@ -99,6 +99,7 @@ Grouped by topic — each writes PNGs into `plots/` unless noted:
 ## Data Sources
 
 - **Germany**: Meteostat (meteostat.net, backed by DWD). Potsdam Säkularstation ≈ Meteostat station `10379` at (52.3833°N, 13.0667°E).
+- **Germany (forecast)**: ECMWF Open Data (`data.ecmwf.int`, CC-BY-4.0) via the `ecmwf-opendata` client — the free, real-time 15-day ENS (`enfo`, 0.25°, 50 perturbed members; no control/`cf` and no 46-day extended range in the free subset). Only the **00/12 UTC** runs reach 360 h; the 06/18 UTC runs stop at 144 h. Max-temp field is `mx2t3` (3-hourly) to 144 h then `mx2t6` (6-hourly). See `potsdam_forecast.py`.
 - **Iran**: NOAA GHCN-Daily — Tehran, Mashhad, Isfahan, Tabriz, Shiraz, Ahvaz, Kerman, Rasht, Zahedan, Bandar Abbas.
 - **Gridded (in progress)**: ERA5 via `cdsapi`, CHIRPS via `climateserv`.
 - Quality filter throughout: keep only years with **≥80% daily availability**.

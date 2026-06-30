@@ -23,12 +23,13 @@ Targets the Meteostat 2.x functional API. See CLAUDE.md for the API caveat.
 from __future__ import annotations
 
 import textwrap
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 import meteostat
 from meteostat import Parameter, Point, daily
@@ -43,6 +44,8 @@ STATIONS = {
         "id": "10379",
         "label": "Potsdam Secular Station",
         "point": Point(52.3833, 13.0667, 81),
+        "coords": (52.3833, 13.0667),  # (lat, lon) for the ECMWF point forecast
+        "forecast": True,  # overlay the 15-day ECMWF ENS plume on the current year
         "note": (
             "Obwohl die Station auf dem Telegrafenberg in einem kleinen "
             "Wäldchen liegt, ist es hier statistisch wärmer als üblich!"
@@ -52,6 +55,7 @@ STATIONS = {
         "id": "10381",
         "label": "Berlin-Dahlem",
         "point": Point(52.4667, 13.3000, 51),
+        "coords": (52.4667, 13.3000),
     },
 }
 
@@ -67,6 +71,12 @@ RED = "#E4572E"  # warmer than normal
 BLUE = "#3D7EA6"  # cooler than normal
 LINE_COLOR = "#1F2D3D"  # climatological mean line
 HILITE = "#1F2D3D"  # warmest-day annotation
+# ECMWF ENS forecast plume — a distinct violet, separate from the warm/cool
+# bars and the grey climatology bands.
+FC_LINE = "#6A2C91"  # ensemble median
+FC_FILL_OUTER = "#E7DBF2"  # 10-90 percentile band
+FC_FILL_INNER = "#C9AEE6"  # 25-75 percentile band
+FC_HORIZON = "#9b8bb4"  # ~10-day skill-limit marker
 # Bands painted widest (outermost) first so inner bands sit on top. Edge keys
 # index into the climatology dict ("min"/"max" or a percentile int).
 BAND_COLORS = {
@@ -247,10 +257,71 @@ LAYOUTS = {
 }
 
 
-def _draw_chart(ax, clim: dict, cur: pd.Series, fs: dict) -> dict:
+def _mono_segments(x: np.ndarray) -> list:
+    """Split ``x`` into slices that are strictly increasing.
+
+    The folded day-of-year jumps backwards if a forecast crosses New Year, so
+    each contiguous increasing run is drawn as its own line/band segment.
+    """
+    starts = [0] + [i for i in range(1, len(x)) if x[i] <= x[i - 1]] + [len(x)]
+    return [slice(starts[k], starts[k + 1]) for k in range(len(starts) - 1)]
+
+
+def _draw_forecast(ax, fc, cur: pd.Series, today: date) -> dict | None:
+    """Overlay the ECMWF ENS daily-Tmax plume for days after the last obs.
+
+    Draws nested 10-90 / 25-75 percentile bands and the ensemble median (solid
+    within the ~10-day skill horizon, dashed beyond), plus a thin connector from
+    the last observed day. Returns the plume value range and the skill-horizon
+    x-position so the caller can fold them into the y-limits and annotate after
+    the axes are scaled, or ``None`` if no future days remain to plot.
+    """
+    vdates = pd.DatetimeIndex(fc.valid_dates)
+    last_obs = cur.index.max()
+    keep = np.asarray(vdates > last_obs)
+    if not keep.any():
+        return None
+    vk = vdates[keep]
+    doy = common_doy(vk)
+    p = {k: np.asarray(fc.pct[k])[keep] for k in (10, 25, 50, 75, 90)}
+    horizon = pd.Timestamp(today + timedelta(days=fc.skill_horizon_days))
+
+    # Connector from the last observed point to the first forecast median.
+    obs_doy = int(common_doy(pd.DatetimeIndex([last_obs]))[0])
+    first = int(np.argmin(doy))
+    ax.plot([obs_doy, doy[first]], [float(cur.iloc[-1]), p[50][first]],
+            color=FC_LINE, lw=1.0, ls=(0, (1, 1)), alpha=0.6, zorder=6)
+
+    for seg in _mono_segments(doy):
+        xs = doy[seg]
+        if xs.size == 0:
+            continue
+        ax.fill_between(xs, p[10][seg], p[90][seg], color=FC_FILL_OUTER,
+                        linewidth=0, zorder=4.4)
+        ax.fill_between(xs, p[25][seg], p[75][seg], color=FC_FILL_INNER,
+                        linewidth=0, zorder=4.5)
+        med = p[50][seg]
+        skill = np.asarray(vk[seg] <= horizon)
+        if skill.any():
+            ax.plot(xs[skill], med[skill], color=FC_LINE, lw=1.7, zorder=6,
+                    solid_capstyle="round")
+        if (~skill).any():  # extend dashed part back one point for continuity
+            j = max(int(np.argmax(~skill)) - 1, 0)
+            ax.plot(xs[j:], med[j:], color=FC_LINE, lw=1.4, ls=(0, (3, 2)),
+                    zorder=6)
+
+    h_doy = int(common_doy(pd.DatetimeIndex([horizon]))[0])
+    return {"lo": float(np.nanmin(p[10])), "hi": float(np.nanmax(p[90])),
+            "h_doy": h_doy if doy.min() <= h_doy <= doy.max() else None}
+
+
+def _draw_chart(ax, clim: dict, cur: pd.Series, fs: dict,
+                forecast=None, today: date | None = None) -> dict:
     """Draw bands, daily bars, climatology line and labels onto ``ax``.
 
-    Returns summary stats (warm-day fraction, day count, warmest day).
+    If ``forecast`` is given, the ECMWF ENS plume is overlaid for the days after
+    the last observation. Returns summary stats (warm-day fraction, day count,
+    warmest day).
     """
     grid = clim["grid"]
     cur_doy = common_doy(cur.index)
@@ -292,9 +363,16 @@ def _draw_chart(ax, clim: dict, cur: pd.Series, fs: dict) -> dict:
         ax.text(362, clim[edge][-1], lab, color="#8f8f8f",
                 fontsize=fs["margin"], ha="right", va="center", zorder=6)
 
+    fc_info = None
+    if forecast is not None and today is not None:
+        fc_info = _draw_forecast(ax, forecast, cur, today)
+
     ax.set_xlim(1, DAYS_IN_YEAR)
     data_lo = min(cur_val.min(), clim["min"].min())
     data_hi = max(cur_val.max(), clim["max"].max())
+    if fc_info is not None:
+        data_lo = min(data_lo, fc_info["lo"])
+        data_hi = max(data_hi, fc_info["hi"])
     ax.set_ylim(min(-12, float(np.floor(data_lo - 2))),
                 max(42, float(np.ceil(data_hi + 2.5))))
     y_hi = ax.get_ylim()[1]
@@ -310,17 +388,23 @@ def _draw_chart(ax, clim: dict, cur: pd.Series, fs: dict) -> dict:
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
 
+    if fc_info is not None and fc_info["h_doy"] is not None:
+        ax.axvline(fc_info["h_doy"], color=FC_HORIZON, lw=0.9, ls=":",
+                   zorder=4.2)
+        ax.text(fc_info["h_doy"] + 2, y_hi - 0.5, "~10-day\nskill limit",
+                fontsize=fs["margin"], color=FC_HORIZON, ha="left", va="top")
+
     return {"warm_frac": float(above.mean()), "n_days": int(above.size),
             "hot_y": float(hot_y), "hot_d": hot_d}
 
 
-def _legend_handles(short: bool) -> list:
+def _legend_handles(short: bool, forecast: bool = False) -> list:
     """Legend handles; ``short`` uses compact labels for the vertical layouts."""
     clim_lab = ("Climatology 1991–2020" if short
                 else f"Climatological daily max ({REF_START}–{REF_END})")
     dist_lab = ("Distribution (min–max)" if short
                 else "Daily-max distribution (min–max & 10–90 pct)")
-    return [
+    handles = [
         Line2D([0], [0], marker="^", color="w", markerfacecolor=RED,
                markersize=9, label="Warmer than normal"),
         Line2D([0], [0], marker="v", color="w", markerfacecolor=BLUE,
@@ -329,16 +413,52 @@ def _legend_handles(short: bool) -> list:
         Line2D([0], [0], marker="s", color="w", markerfacecolor="#cccccc",
                markeredgecolor="none", markersize=11, label=dist_lab),
     ]
+    if forecast:
+        fc_lab = ("ECMWF 15-day outlook" if short
+                  else "ECMWF 15-day ENS outlook (10–90 / 25–75%)")
+        handles += [
+            Patch(facecolor=FC_FILL_INNER, edgecolor=FC_FILL_OUTER,
+                  label=fc_lab),
+            Line2D([0], [0], color=FC_LINE, linewidth=1.7,
+                   label=("Ens. median" if short else "Ensemble median")),
+        ]
+    return handles
+
+
+def _maybe_forecast(station: dict, year: int, today: date,
+                    series: pd.Series):
+    """Fetch the ECMWF ENS point forecast for the current year, if enabled.
+
+    Returns a ``PointForecast`` or ``None``. Any failure (missing optional deps,
+    network/data error) is non-fatal: the chart is rendered without the overlay.
+    """
+    if not station.get("forecast") or year != today.year:
+        return None
+    try:
+        import potsdam_forecast
+
+        lat, lon = station["coords"]
+        fc = potsdam_forecast.get_point_forecast(lat, lon, obs_series=series)
+        flag = "calibrated" if fc.calibrated else "uncalibrated"
+        print(f"   🔮 ECMWF ENS {fc.run:%Y-%m-%d %HZ}: {fc.n_members} members, "
+              f"bias {fc.bias_c:+.1f} °C ({flag})")
+        return fc
+    except Exception as exc:  # noqa: BLE001 - overlay is best-effort
+        print(f"   ⚠️ forecast overlay unavailable: {exc}")
+        return None
 
 
 def make_plot(key: str, year: int | None = None,
-              formats: tuple = ("wide", "portrait", "story")) -> list:
+              formats: tuple = ("wide", "portrait", "story"),
+              with_forecast: bool = True) -> list:
     """Render the yearly-cycle chart for one station in several formats.
 
     Args:
         key: A key into ``STATIONS``.
         year: Year to plot; defaults to the current year.
         formats: Layout names from ``LAYOUTS`` to render.
+        with_forecast: Overlay the 15-day ECMWF ENS plume (current year only,
+            stations with ``"forecast": True``).
 
     Returns:
         The list of written PNG paths.
@@ -355,25 +475,31 @@ def make_plot(key: str, year: int | None = None,
         raise RuntimeError(f"No data for {year} at {station['label']}")
     rec_start = int(series.index.year.min())
     rec_years = int(series.index.year.max() - rec_start + 1)
+    forecast = _maybe_forecast(station, year, today, series) if with_forecast \
+        else None
 
     return [_render(LAYOUTS[f], key, station, year, today, clim, cur, table,
-                    rec_start, rec_years) for f in formats]
+                    rec_start, rec_years, forecast) for f in formats]
 
 
 def _render(lay: dict, key, station, year, today, clim, cur, table,
-            rec_start: int, rec_years: int) -> str:
+            rec_start: int, rec_years: int, forecast=None) -> str:
     """Compose one figure for the given layout and save it as a PNG."""
     fig = plt.figure(figsize=lay["figsize"])
     ax = fig.add_axes(lay["axes"])
-    info = _draw_chart(ax, clim, cur, lay["fs"])
+    info = _draw_chart(ax, clim, cur, lay["fs"], forecast=forecast,
+                       today=today)
+    has_fc = forecast is not None
 
     if lay["vertical"]:
-        fig.legend(handles=_legend_handles(True), loc="upper center",
-                   bbox_to_anchor=(0.5, lay["legend_y"]), ncol=2,
+        # 3 columns when the forecast entries are present so the legend stays
+        # two rows tall and clears the summary lines below it.
+        fig.legend(handles=_legend_handles(True, has_fc), loc="upper center",
+                   bbox_to_anchor=(0.5, lay["legend_y"]), ncol=3 if has_fc else 2,
                    fontsize=lay["fs"]["legend"], frameon=False,
-                   handletextpad=0.5, columnspacing=1.6)
+                   handletextpad=0.5, columnspacing=1.2 if has_fc else 1.6)
     else:
-        ax.legend(handles=_legend_handles(False), loc="upper left",
+        ax.legend(handles=_legend_handles(False, has_fc), loc="upper left",
                   fontsize=lay["fs"]["legend"], frameon=False,
                   handletextpad=0.6, borderpad=0.4)
 
@@ -391,8 +517,11 @@ def _render(lay: dict, key, station, year, today, clim, cur, table,
                  f"{rec_years}-year record since {rec_start}",
                  ha="center", fontsize=lay["sub_size"] - 1, color="#888888")
         _draw_keystats(fig, table, info, lay)
-        fig.text(0.5, lay["brand_y"], f"{gen}  ·  Data: Meteostat / DWD",
-                 ha="center", fontsize=9, color="#999999")
+        credit = f"{gen}  ·  Data: Meteostat / DWD"
+        if forecast is not None:
+            credit += "  ·  Forecast: ECMWF ENS (CC-BY 4.0)"
+        fig.text(0.5, lay["brand_y"], credit, ha="center", fontsize=9,
+                 color="#999999")
     else:
         fig.text(ax_l, 0.955,
                  f"{station['label']} — Daily Maximum Temperature",
@@ -404,6 +533,9 @@ def _render(lay: dict, key, station, year, today, clim, cur, table,
         fig.text(0.985, 0.955, gen, ha="right", fontsize=9, color="#555555")
         fig.text(0.985, 0.925, "Data: Meteostat / DWD", ha="right",
                  fontsize=9, color="#555555")
+        if forecast is not None:
+            fig.text(0.985, 0.898, "Forecast: ECMWF ENS · CC-BY 4.0",
+                     ha="right", fontsize=8, color="#777777")
         _draw_table(fig, table, lay)
 
     note = station.get("note")

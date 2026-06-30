@@ -117,6 +117,7 @@ The following 12 Iranian stations have verified GHCN-Daily IDs with precipitatio
 ### Data Sources
 
 - **Primary (Potsdam):** Meteostat API (meteostat.net) - backed by DWD
+- **Forecast (Potsdam):** ECMWF Open Data 15-day ENS (`ecmwf-opendata`, CC-BY-4.0) — see `potsdam_forecast.py`; overlaid as a plume on `potsdam_yearly_cycle.py`. Free subset: 50 perturbed members, 00/12 UTC runs reach 15 days (06/18 UTC only 6).
 - **Iran Stations:** NOAA GHCN-Daily (https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily)
 - **Alternative (Iran):** CHIRPS satellite data (1981-present) for complete spatial coverage
 
